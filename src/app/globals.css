@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #050505;
+    --secondary-bg: #101010;
+    --foreground: #ffffff;
+    --accent-blue: #0a84ff;
+    --accent-glow: rgba(10, 132, 255, 0.4);
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+  }
+
+  * {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+  }
+
+  html,
+  body {
+    background-color: #050505;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom Hide Scrollbar for ultra clean look */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #0a84ff;
+  }
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.82) 0%, rgba(8, 10, 18, 0.78) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.glass-card-hover {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(10, 132, 255, 0.5);
+  box-shadow: 0 0 30px rgba(10, 132, 255, 0.35), 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Dynamic Cursor Specular Light Reflection */
+.glass-reflection {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-reflection::before {
+  content: "";
+  position: absolute;
+  top: var(--mouse-y, 50%);
+  left: var(--mouse-x, 50%);
+  transform: translate(-50%, -50%);
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.glass-reflection:hover::before {
+  opacity: 1;
+}
+
+/* Rotating Neon Underline Animation for Hero Name */
+@keyframes continuousLightSlide {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes discordLoadingGlow {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.discord-loading-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.discord-loading-glow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.12) 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.12) 70%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  filter: blur(10px);
+  opacity: 0.95;
+  animation: discordLoadingGlow 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.animated-blue-underline {
+  height: 3px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(10, 132, 255, 0.2) 20%,
+    #0a84ff 50%,
+    rgba(10, 132, 255, 0.2) 80%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: continuousLightSlide 2.5s linear infinite;
+  box-shadow: 0 0 12px #0a84ff, 0 0 24px rgba(10, 132, 255, 0.6);
+}
+
+/* Subtle Text Gradient */
+.text-gradient-apple {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-blue {
+  background: linear-gradient(135deg, #60a5fa 0%, #0a84ff 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Mobile-specific optimizations (<768px or coarse touch devices) */
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  html,
+  body {
+    touch-action: manipulation;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Disable backdrop-filter & blur filters on mobile for crisp text */
+  *,
+  *::before,
+  *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Strip blur-* Tailwind utility classes on mobile */
+  .blur,
+  .blur-sm,
+  .blur-md,
+  .blur-lg,
+  .blur-xl,
+  .blur-2xl,
+  .blur-3xl,
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    filter: none !important;
+  }
+
+  /* Strip blur from glass-panel (backdrop-filter was already removed above)
+     but do NOT override background/border so CardContainer inline style wins */
+  .glass-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Disable the specular light reflection pseudo-element on mobile */
+  .discord-loading-glow::before,
+  .glass-reflection::before {
+    display: none !important;
+  }
+
+  /* Disable hover tilt transforms on mobile */
+  .glass-card-hover:hover {
+    transform: none !important;
+  }
+}
+
