@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     // Default or configured Discord Webhook URL
     const targetWebhookUrl =
       webhookUrl ||
-      process.env.DISCORD_WEBHOOK_URL ||
+      process.env.DISCORD_WEBHOOK_URL
      // process.env.NEXT_DISCORD_WEBHOOK_URL;
 
     // Discord Rich Embed formatting
