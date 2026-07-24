@@ -66,6 +66,39 @@ type CommandLogEntry = {
   details: string;
 };
 
+type VisitorRecord = {
+  visitorId: string;
+  firstVisit: string; // ISO
+  lastVisit: string; // ISO
+  visitCount: number;
+  country?: string;
+  region?: string;
+  city?: string;
+  ipHash?: string;
+  browser?: string;
+  browserVersion?: string;
+  os?: string;
+  deviceType?: string;
+  screenResolution?: string;
+  timezone?: string;
+  language?: string;
+  referrer?: string;
+  landingPage?: string;
+  currentPage?: string;
+  avgSessionMs?: number;
+  avgScrollPct?: number;
+  buttonClicks?: Record<string, number>;
+  resumeDownloads?: number;
+  discordClicks?: number;
+};
+
+type AnalyticsStore = {
+  visitors: VisitorRecord[];
+  totalVisitors: number; // unique
+  returningVisitors: number;
+  createdAt: string;
+};
+
 const normalizeEnv = (value?: string) => {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -87,6 +120,104 @@ if (!BOT_TOKEN || !USER_ID) {
 const CACHE_PATH = path.join(process.cwd(), "bot", "discord-presence-cache.json");
 const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
 const LOG_PATH = path.join(process.cwd(), "bot", "command-logs.json");
+const ANALYTICS_PATH = path.join(process.cwd(), "bot", "analytics.json");
+
+// SSE connections for live updates
+const sseClients: http.ServerResponse[] = [];
+
+const readAnalytics = async (): Promise<AnalyticsStore> => {
+  try {
+    const raw = await fs.readFile(ANALYTICS_PATH, "utf8");
+    return JSON.parse(raw) as AnalyticsStore;
+  } catch {
+    const init: AnalyticsStore = { visitors: [], totalVisitors: 0, returningVisitors: 0, createdAt: new Date().toISOString() };
+    await fs.writeFile(ANALYTICS_PATH, JSON.stringify(init, null, 2), "utf8");
+    return init;
+  }
+};
+
+const writeAnalytics = async (data: AnalyticsStore) => {
+  await fs.writeFile(ANALYTICS_PATH, JSON.stringify(data, null, 2), "utf8");
+};
+
+import crypto from "crypto";
+
+const hashIp = (ip?: string) => {
+  if (!ip) return undefined;
+  return crypto.createHash("sha256").update(ip).digest("hex");
+};
+
+const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) => {
+  const analytics = await readAnalytics();
+  let vid = payload.visitorId;
+  if (!vid) {
+    // derive id from browser+os+screen+lang+tz
+    const fingerprint = `${payload.browser || ""}|${payload.browserVersion || ""}|${payload.os || ""}|${payload.deviceType || ""}|${payload.screenResolution || ""}|${payload.timezone || ""}|${payload.language || ""}`;
+    vid = crypto.createHash("sha256").update(fingerprint).digest("hex");
+  }
+
+  const now = new Date().toISOString();
+  const ipHash = hashIp(payload.ip);
+  const existing = analytics.visitors.find((v) => v.visitorId === vid || (ipHash && v.ipHash === ipHash));
+  let isNew = false;
+  if (existing) {
+    existing.lastVisit = now;
+    existing.visitCount = (existing.visitCount || 0) + 1;
+    // merge some fields
+    existing.country = payload.country || existing.country;
+    existing.region = payload.region || existing.region;
+    existing.city = payload.city || existing.city;
+    existing.currentPage = payload.currentPage || existing.currentPage;
+    existing.avgSessionMs = payload.avgSessionMs ? ((existing.avgSessionMs || 0) + payload.avgSessionMs) / 2 : existing.avgSessionMs;
+    existing.avgScrollPct = payload.avgScrollPct ? ((existing.avgScrollPct || 0) + payload.avgScrollPct) / 2 : existing.avgScrollPct;
+    existing.buttonClicks = { ...(existing.buttonClicks || {}), ...(payload.buttonClicks || {}) };
+    existing.ipHash = existing.ipHash || ipHash;
+  } else {
+    const rec: VisitorRecord = {
+      visitorId: vid,
+      firstVisit: now,
+      lastVisit: now,
+      visitCount: 1,
+      country: payload.country,
+      region: payload.region,
+      city: payload.city,
+      ipHash,
+      browser: payload.browser,
+      browserVersion: payload.browserVersion,
+      os: payload.os,
+      deviceType: payload.deviceType,
+      screenResolution: payload.screenResolution,
+      timezone: payload.timezone,
+      language: payload.language,
+      referrer: payload.referrer,
+      landingPage: payload.landingPage,
+      currentPage: payload.currentPage,
+      avgSessionMs: payload.avgSessionMs,
+      avgScrollPct: payload.avgScrollPct,
+      buttonClicks: payload.buttonClicks || {},
+      resumeDownloads: payload.resumeDownloads || 0,
+      discordClicks: payload.discordClicks || 0,
+    };
+    analytics.visitors.push(rec);
+    analytics.totalVisitors = analytics.visitors.length;
+    isNew = true;
+  }
+
+  await writeAnalytics(analytics);
+
+  // notify SSE clients
+  const msg = JSON.stringify({ type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now });
+  sseClients.forEach((res) => {
+    try {
+      res.write(`event: analytics\n`);
+      res.write(`data: ${msg}\n\n`);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  return { visitorId: vid, isNew };
+};
 
 
 const DEFAULT_CARD_STATE: CardState = {
@@ -469,6 +600,42 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
         ],
       },
     ],
+  },
+  {
+    name: "display-viewer",
+    description: "Enable or disable visitor counter.",
+    options: [
+      {
+        name: "state",
+        type: 3,
+        description: "on or off",
+        required: true,
+        choices: [
+          { name: "on", value: "on" },
+          { name: "off", value: "off" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "display-total-viewers",
+    description: "Show total visitor counts and breakdown.",
+  },
+  {
+    name: "display-total-viewers-logs",
+    description: "Send new visitor logs to specified channel.",
+    options: [
+      { name: "channelid", type: 3, description: "Channel ID to send logs to", required: true },
+    ],
+  },
+  {
+    name: "show-visitors-list",
+    description: "Show paginated visitor list.",
+    options: [ { name: "page", type: 4, description: "Page number", required: false } ],
+  },
+  {
+    name: "visitor-stats",
+    description: "Show visitor analytics stats.",
   },
 ];
 
@@ -863,6 +1030,92 @@ client.on("interactionCreate", async (interaction) => {
         }
         break;
       }
+      case "display-viewer": {
+        const stateValue = interaction.options.getString("state", true);
+        const enabled = stateValue === "on";
+        await saveCardState({ discordSyncEnabled: true, /* keep other flags */ });
+        await saveCardState({ botLogsEnabled: enabled });
+        await successReply(`${enabled ? "✅ Visitor Counter Enabled" : "❌ Visitor Counter Disabled"}`);
+        await logCommand(command, user, `Visitor counter ${enabled ? "enabled" : "disabled"}`);
+        break;
+      }
+      case "display-total-viewers": {
+        const analytics = await readAnalytics();
+        const total = analytics.totalVisitors;
+        const unique = analytics.visitors.length;
+        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount>1?1:0), 0);
+        const embed = new EmbedBuilder()
+          .setTitle("👁 Total Visitors")
+          .addFields(
+            { name: "Total Visitors", value: String(total || unique), inline: true },
+            { name: "Unique Visitors", value: String(unique), inline: true },
+            { name: "Returning Visitors", value: String(returning), inline: true }
+          )
+          .setColor(0x5865f2)
+          .setTimestamp(new Date());
+        await successReply({ embeds: [embed] } as any);
+        break;
+      }
+      case "display-total-viewers-logs": {
+        const channelId = interaction.options.getString("channelid", true).trim();
+        await saveCardState({ botLogChannelId: channelId });
+        await successReply(`Visitor logs will be posted to <#${channelId}>`);
+        await logCommand(command, user, `Set visitor logs channel to ${channelId}`);
+        break;
+      }
+      case "show-visitors-list": {
+        const page = interaction.options.getInteger("page") || 1;
+        const analytics = await readAnalytics();
+        const pageSize = 10;
+        const start = (page-1)*pageSize;
+        const slice = analytics.visitors.slice(start, start+pageSize);
+        const embeds = slice.map((v,i)=> new EmbedBuilder().setTitle(`#${start+i+1} ${v.visitorId.slice(0,8)}`).addFields(
+          { name: "Country", value: v.country||"-", inline:true },
+          { name: "City", value: v.city||"-", inline:true },
+          { name: "Device", value: v.deviceType||"-", inline:true },
+          { name: "Browser", value: v.browser||"-", inline:true },
+          { name: "OS", value: v.os||"-", inline:true },
+          { name: "Visits", value: String(v.visitCount||0), inline:true },
+          { name: "First Seen", value: v.firstVisit||"-", inline:true },
+          { name: "Last Seen", value: v.lastVisit||"-", inline:true }
+        ).setColor(0x5865f2));
+        await successReply({ embeds: embeds as any[] } as any);
+        break;
+      }
+      case "visitor-stats": {
+        const analytics = await readAnalytics();
+        const total = analytics.totalVisitors;
+        const unique = analytics.visitors.length;
+        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount>1?1:0), 0);
+        const mobile = analytics.visitors.filter((v)=> (v.deviceType||"").toLowerCase().includes("mobile")).length;
+        const desktop = analytics.visitors.length - mobile;
+        const topCountry = analytics.visitors.reduce((acc:Record<string,number>, v)=>{ if(v.country) acc[v.country]=(acc[v.country]||0)+1; return acc; },{} as Record<string,number>);
+        const topCountryName = Object.keys(topCountry).sort((a,b)=> (topCountry[b]||0)-(topCountry[a]||0))[0] || "-";
+        // avg session and scroll
+        const avgSessionMs = Math.round((analytics.visitors.reduce((s,v)=> s + (v.avgSessionMs||0),0) || 0) / Math.max(1, analytics.visitors.length));
+        const avgScroll = Math.round((analytics.visitors.reduce((s,v)=> s + (v.avgScrollPct||0),0) || 0) / Math.max(1, analytics.visitors.length));
+        const resumeDownloads = analytics.visitors.reduce((s,v)=> s + (v.resumeDownloads||0),0);
+        const discordClicks = analytics.visitors.reduce((s,v)=> s + (v.discordClicks||0),0);
+
+        const embed = new EmbedBuilder()
+          .setTitle("Visitor Stats")
+          .addFields(
+            { name: "👁️ Total Visitors", value: String(total || unique), inline: true },
+            { name: "🆕 Unique Visitors", value: String(unique), inline: true },
+            { name: "🔁 Returning Visitors", value: String(returning), inline: true },
+            { name: "📱 Mobile", value: `${Math.round((mobile/Math.max(1,analytics.visitors.length))*100)}%`, inline: true },
+            { name: "💻 Desktop", value: `${Math.round((desktop/Math.max(1,analytics.visitors.length))*100)}%`, inline: true },
+            { name: "🌍 Top Country", value: topCountryName, inline: true },
+            { name: "🕒 Avg Session", value: `${Math.floor(avgSessionMs/60000)}m ${Math.round((avgSessionMs%60000)/1000)}s`, inline: true },
+            { name: "📜 Avg Scroll", value: `${avgScroll}%`, inline: true },
+            { name: "🖱️ Discord Button Clicks", value: String(discordClicks), inline: true },
+            { name: "📄 Resume Downloads", value: String(resumeDownloads), inline: true }
+          )
+          .setColor(0x5865f2)
+          .setTimestamp(new Date());
+        await successReply({ embeds: [embed] } as any);
+        break;
+      }
       default: {
         await failReply("Unknown command.");
         break;
@@ -882,12 +1135,102 @@ client.login(BOT_TOKEN).catch((error) => {
 
 const port = Number(process.env.PORT) || 3000;
 const server = http.createServer((req, res) => {
+  // Basic health
   if (req.url === "/healthz" || req.url === "/") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", uptime: process.uptime() }));
     return;
   }
 
+  // Server-Sent Events for live analytics
+  if (req.url === "/analytics/events" && req.method === "GET") {
+    res.writeHead(200, {
+      Connection: "keep-alive",
+      "Cache-Control": "no-cache",
+      "Content-Type": "text/event-stream",
+      "Access-Control-Allow-Origin": "*",
+    });
+    res.write(`retry: 10000\n\n`);
+    sseClients.push(res);
+    req.on("close", () => {
+      const idx = sseClients.indexOf(res);
+      if (idx >= 0) sseClients.splice(idx, 1);
+    });
+    return;
+  }
+
+  // Track endpoint (POST)
+  if (req.url === "/analytics/track" && req.method === "POST") {
+    try {
+      let body = "";
+      for await (const chunk of req) {
+        body += chunk;
+      }
+      const data = JSON.parse(body || "{}") as any;
+      const ip = req.socket.remoteAddress || undefined;
+      const result = await upsertVisitor({ ...data, ip });
+      // send discord logs if configured and visitor is new
+      const state = await readCardState();
+      if (result.isNew && state.botLogsEnabled !== false && state.botLogChannelId) {
+        const ch = await client.channels.fetch(state.botLogChannelId).catch(() => null);
+        if (ch && (ch as any).send) {
+          const embed = new EmbedBuilder()
+            .setTitle("👁 New Portfolio Visitor")
+            .setDescription(`Visitor ${result.visitorId}`)
+            .setColor(0x5865f2)
+            .setTimestamp(new Date())
+            .setFooter({ text: "Apple Glass Portfolio Analytics" });
+          await (ch as TextChannel).send({ embeds: [embed] }).catch(() => undefined);
+        }
+      }
+      res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      res.end(JSON.stringify({ ok: true, visitorId: result.visitorId, isNew: result.isNew }));
+    } catch (err) {
+      console.error("/analytics/track error", err);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "failed" }));
+    }
+    return;
+  }
+
+  // Get analytics summary
+  if (req.url === "/analytics" && req.method === "GET") {
+    try {
+      const analytics = await readAnalytics();
+      // compute some stats
+      const mobile = analytics.visitors.filter((v) => (v.deviceType || "").toLowerCase().includes("mobile")).length;
+      const desktop = analytics.visitors.length - mobile;
+      const topCountry = analytics.visitors.reduce((acc: Record<string, number>, v) => { if (v.country) acc[v.country] = (acc[v.country] || 0) + 1; return acc; }, {} as Record<string, number>);
+      const topCountryName = Object.keys(topCountry).sort((a,b)=> (topCountry[b]||0)-(topCountry[a]||0))[0] || null;
+      res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      res.end(JSON.stringify({ totalVisitors: analytics.totalVisitors, visitors: analytics.visitors.length, mobilePct: analytics.visitors.length? Math.round((mobile/analytics.visitors.length)*100):0, desktopPct: analytics.visitors.length? Math.round((desktop/analytics.visitors.length)*100):0, topCountry: topCountryName }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "failed" }));
+    }
+    return;
+  }
+
+  // visitors list
+  if (req.url && req.url.startsWith("/visitors") && req.method === "GET") {
+    try {
+      const analytics = await readAnalytics();
+      // simple pagination via ?page=1&pageSize=20
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const page = parseInt(url.searchParams.get("page") || "1");
+      const pageSize = parseInt(url.searchParams.get("pageSize") || "20");
+      const start = (page-1)*pageSize;
+      const slice = analytics.visitors.slice(start, start+pageSize);
+      res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      res.end(JSON.stringify({ total: analytics.visitors.length, page, pageSize, data: slice }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "failed" }));
+    }
+    return;
+  }
+
+  // default not found
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
 });
