@@ -812,10 +812,27 @@ client.on("interactionCreate", async (interaction) => {
 
   const sendReply = async (body: any) => {
     const payload = normalizeReply(body, true);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(payload as any);
-    } else {
-      await interaction.reply(payload as any);
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(payload as any);
+      } else {
+        await interaction.reply(payload as any);
+      }
+    } catch (err: any) {
+      // Handle common Discord REST errors gracefully during reply:
+      // - 10062 Unknown interaction: the interaction token is invalid/stale.
+      // - 40060 Interaction has already been acknowledged.
+      if (err && (err.code === 10062)) {
+        console.warn("Reply failed: Unknown interaction (possibly stale).", err.message || err);
+        try { await interaction.followUp(payload as any).catch(()=>{}); } catch {}
+        return;
+      }
+      if (err && (err.code === 40060)) {
+        // Already acknowledged: the interaction was handled; try followUp
+        try { await interaction.followUp(payload as any).catch(()=>{}); } catch {}
+        return;
+      }
+      console.error("Failed to send interaction reply:", err);
     }
   };
 
