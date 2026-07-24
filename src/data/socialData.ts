@@ -1,3 +1,6 @@
+// File: data/socialData.ts
+// Description: Static social profile and content data used throughout the site.
+
 export interface SocialProfile {
   id: string;
   name: string;
@@ -14,6 +17,7 @@ export interface SocialProfile {
   details?: Record<string, any>;
 }
 
+// Core module export or function definition that implements this feature.
 export const HERO_DATA = {
   name: "Shiva Gopi",
   title: "Principal Spatial UI Architect & Developer",
@@ -25,6 +29,7 @@ export const HERO_DATA = {
   resumeUrl: "#resume",
 };
 
+// Core module export or function definition that implements this feature.
 export const SOCIAL_PROFILES: SocialProfile[] = [
   {
     id: "instagram",
@@ -176,9 +181,9 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
     avatar: "/assets/profile_avatar1.jpg",
     bio: "Community page sharing software development tutorials, keynote highlights, tech hardware reviews, and industry insights.",
     stats: [
-      { label: "Followers", value: "18.5K" },
-      { label: "Likes", value: "14.2K" },
-      { label: "Community", value: "Active" },
+      { label: "Followers", value: "" },
+      { label: "Likes", value: "" },
+      { label: "Community", value: "" },
     ],
     actionLabel: "Visit Facebook Page",
     actionUrl: "https://facebook.com",
@@ -201,18 +206,18 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
     color: "#5865F2",
     accentGlow: "rgba(88, 101, 242, 0.4)",
     avatar: "/assets/profile_avatar1.jpg",
-    bio: "Active across high-performance web engineering communities. Feel free to message for collaborations or tech discussions.",
+    bio: "",
     stats: [
-      { label: "Status", value: "Online" },
+      { label: "Status", value: "" },
       { label: "Servers", value: "" },
-      { label: "Roles", value: "Admin" },
+      { label: "Roles", value: "" },
     ],
     actionLabel: "Copy Discord Tag",
     actionUrl: "#copy",
     badge: "Developer Verified",
     details: {
-      customStatus: "Developing Next.js 15 Apple Glass Portfolio 🚀",
-      servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
+      customStatus: "",
+      servers: [""],
     },
   },
   {

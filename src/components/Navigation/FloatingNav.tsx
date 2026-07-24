@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/Navigation/FloatingNav.tsx
+// Description: Source file for FloatingNav.tsx.
+
 import React, { useState, useEffect } from "react";
 import { User, Mail } from "lucide-react";
 import {
@@ -12,6 +15,7 @@ import {
   TwitterIcon,
 } from "@/components/Icons/SocialBrandIcons";
 
+// Core module export or function definition that implements this feature.
 const NAV_ITEMS = [
   { id: "hero", label: "Developer", icon: User },
   { id: "instagram", label: "Instagram", icon: InstagramIcon },
@@ -25,16 +29,20 @@ const NAV_ITEMS = [
 ];
 
 export const FloatingNav: React.FC = () => {
+// Core module export or function definition that implements this feature.
   const [activeSection, setActiveSection] = useState("hero");
 
   useEffect(() => {
     const handleScroll = () => {
       const sections = NAV_ITEMS.map((item) => document.getElementById(item.id));
+// Core module export or function definition that implements this feature.
       const scrollPosition = window.scrollY + window.innerHeight / 2;
 
       for (const section of sections) {
         if (section) {
+// Core module export or function definition that implements this feature.
           const top = section.offsetTop;
+// Core module export or function definition that implements this feature.
           const height = section.offsetHeight;
           if (scrollPosition >= top && scrollPosition < top + height) {
             setActiveSection(section.id);
@@ -51,7 +59,9 @@ export const FloatingNav: React.FC = () => {
   return (
     <nav className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40 hidden sm:flex flex-col items-center gap-3 p-3 rounded-full bg-white/5 backdrop-blur-2xl border border-white/15 shadow-2xl shadow-black/80">
       {NAV_ITEMS.map((item) => {
+// Core module export or function definition that implements this feature.
         const Icon = item.icon;
+// Core module export or function definition that implements this feature.
         const isActive = activeSection === item.id;
         return (
           <a

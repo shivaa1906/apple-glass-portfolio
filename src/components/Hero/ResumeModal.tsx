@@ -1,9 +1,13 @@
 "use client";
 
+// File: components/Hero/ResumeModal.tsx
+// Description: Resume modal dialog with open/close animation.
+
 import { type FC } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X, Download, FileText, CheckCircle2, Sparkles } from "lucide-react";
 
+// Interface definition used for typed data structures.
 interface ResumeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,8 +20,11 @@ const getIsMobileDevice = () =>
     window.matchMedia("(pointer: coarse)").matches);
 
 export const ResumeModal: FC<ResumeModalProps> = ({ isOpen, onClose }) => {
+// Core module export or function definition that implements this feature.
   const shouldReduceMotion = useReducedMotion();
+// Core module export or function definition that implements this feature.
   const isMobileDevice = typeof window !== "undefined" ? getIsMobileDevice() : false;
+// Core module export or function definition that implements this feature.
   const disableMotion = shouldReduceMotion || isMobileDevice;
 
   const renderModalContent = () => (

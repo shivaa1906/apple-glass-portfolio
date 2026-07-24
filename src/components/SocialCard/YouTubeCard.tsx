@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/YouTubeCard.tsx
+// Description: YouTube social card rendering latest channel metrics.
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -7,6 +10,7 @@ import { CardContainer } from "./CardContainer";
 import { Play, Eye, Clock, ExternalLink, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { YouTubeIcon } from "@/components/Icons/SocialBrandIcons";
 
+// Type definition used to describe the structure of data in this component.
 type YouTubeStatsResponse = {
   channelTitle: string;
   profilePictureUrl: string;
@@ -16,6 +20,7 @@ type YouTubeStatsResponse = {
   videos: YouTubeVideo[];
 };
 
+// Type definition used to describe the structure of data in this component.
 type YouTubeVideo = {
   id: string;
   title: string;
@@ -42,11 +47,17 @@ const formatCount = (value: number) => {
 
 export const YouTubeCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "youtube")!;
+// Core module export or function definition that implements this feature.
   const [youtubeData, setYoutubeData] = useState<YouTubeStatsResponse | null>(null);
+// Core module export or function definition that implements this feature.
   const [statsLoading, setStatsLoading] = useState(true);
+// Core module export or function definition that implements this feature.
   const [statsError, setStatsError] = useState<string | null>(null);
+// Core module export or function definition that implements this feature.
   const [currentPage, setCurrentPage] = useState(0);
+// Core module export or function definition that implements this feature.
   const [dragStartX, setDragStartX] = useState<number | null>(null);
+// Core module export or function definition that implements this feature.
   const cardSliderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -55,6 +66,7 @@ export const YouTubeCard: React.FC = () => {
         setStatsLoading(true);
         setStatsError(null);
 
+// Core module export or function definition that implements this feature.
         const response = await fetch("/api/youtube", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
@@ -63,10 +75,12 @@ export const YouTubeCard: React.FC = () => {
           throw new Error("Unable to load live YouTube profile information.");
         }
 
+// Core module export or function definition that implements this feature.
         const data: YouTubeStatsResponse = await response.json();
         setYoutubeData(data);
         setCurrentPage(0);
       } catch (error) {
+// Core module export or function definition that implements this feature.
         const message = error instanceof Error ? error.message : "Something went wrong while loading YouTube data.";
         setStatsError(message);
       } finally {
@@ -95,12 +109,19 @@ export const YouTubeCard: React.FC = () => {
       video.url.trim()
     );
 
+// Core module export or function definition that implements this feature.
   const fallbackVideos = ((profile.details?.videos as Partial<YouTubeVideo>[] | undefined) ?? []).filter(isValidVideo);
+// Core module export or function definition that implements this feature.
   const apiVideos = (youtubeData?.videos ?? []).filter(isValidVideo);
+// Core module export or function definition that implements this feature.
   const allVideos = apiVideos.length ? apiVideos : fallbackVideos;
+// Core module export or function definition that implements this feature.
   const totalPages = Math.max(1, Math.ceil(allVideos.length / 2));
+// Core module export or function definition that implements this feature.
   const visibleVideos = allVideos.slice(currentPage * 2, currentPage * 2 + 2);
+// Core module export or function definition that implements this feature.
   const displayAvatar = youtubeData?.profilePictureUrl || profile.avatar || "/assets/profile_avatar1.jpg";
+// Core module export or function definition that implements this feature.
   const displayName = youtubeData?.channelTitle || profile.name;
 
   const stats = useMemo(() => {
@@ -134,6 +155,7 @@ export const YouTubeCard: React.FC = () => {
       return;
     }
 
+// Core module export or function definition that implements this feature.
     const delta = clientX - dragStartX;
     if (delta > 40) {
       handlePrev();

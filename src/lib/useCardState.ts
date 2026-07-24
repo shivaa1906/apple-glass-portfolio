@@ -1,5 +1,8 @@
 "use client";
 
+// File: lib/useCardState.ts
+// Description: Custom hook to load shared card state from the API.
+
 import { useEffect, useState } from "react";
 
 export type CardState = {
@@ -23,6 +26,7 @@ export type CardState = {
   heroStatus?: string;
 };
 
+// Core module export or function definition that implements this feature.
 const DEFAULT_CARD_STATE: CardState = {
   editableWebhookUrl: "",
   botLogsEnabled: true,
@@ -47,6 +51,7 @@ const DEFAULT_CARD_STATE: CardState = {
 };
 
 export const useCardState = () => {
+// Core module export or function definition that implements this feature.
   const [cardState, setCardState] = useState<CardState>(DEFAULT_CARD_STATE);
 
   useEffect(() => {
@@ -54,6 +59,7 @@ export const useCardState = () => {
 
     const loadState = async () => {
       try {
+// Core module export or function definition that implements this feature.
         const response = await fetch("/api/card-state", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
@@ -61,6 +67,7 @@ export const useCardState = () => {
           return;
         }
 
+// Core module export or function definition that implements this feature.
         const data = (await response.json()) as CardState;
         if (!mounted) return;
 

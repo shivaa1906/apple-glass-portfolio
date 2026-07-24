@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/DiscordCard.tsx
+// Description: Discord social card component displaying presence and server info.
+
 import { type FC, useEffect, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -8,6 +11,7 @@ import { Copy, ShieldCheck, Sparkles, Terminal } from "lucide-react";
 import { DiscordIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 
+// Type definition used to describe the structure of data in this component.
 type DiscordPresence = {
   username: string;
   displayName: string;
@@ -22,8 +26,11 @@ type DiscordPresence = {
 
 export const DiscordCard: FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "discord")!;
+// Core module export or function definition that implements this feature.
   const cardState = useCardState();
+// Core module export or function definition that implements this feature.
   const [hasMounted, setHasMounted] = useState(false);
+// Core module export or function definition that implements this feature.
   const [presence, setPresence] = useState<DiscordPresence>({
     username: profile.handle || "root_roy",
     displayName: profile.name || "Shiva gopi",
@@ -63,12 +70,14 @@ export const DiscordCard: FC = () => {
 
     const fetchPresence = async () => {
       try {
+// Core module export or function definition that implements this feature.
         const response = await fetch("/api/discord", {
           cache: "no-store",
           headers: { "ngrok-skip-browser-warning": "true" },
         });
         if (!response.ok) return;
 
+// Core module export or function definition that implements this feature.
         const data: DiscordPresence = await response.json();
         updatePresence(data);
       } catch {
@@ -82,10 +91,12 @@ export const DiscordCard: FC = () => {
       }
 
       try {
+// Core module export or function definition that implements this feature.
         const source = new EventSource("/api/discord?stream=1");
 
         source.onmessage = (event) => {
           try {
+// Core module export or function definition that implements this feature.
             const data = JSON.parse(event.data) as DiscordPresence;
             updatePresence(data);
           } catch {
@@ -125,8 +136,11 @@ export const DiscordCard: FC = () => {
     };
   }, []);
 
+// Core module export or function definition that implements this feature.
   const rawStatus = presence.status || "online";
+// Core module export or function definition that implements this feature.
   const displayStatus = rawStatus === "dnd" ? "Do Not Disturb" : rawStatus === "invisible" ? "Invisible" : rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+// Core module export or function definition that implements this feature.
   const statusDotColor =
     rawStatus === "online"
       ? "bg-emerald-500"
@@ -135,6 +149,7 @@ export const DiscordCard: FC = () => {
       : rawStatus === "dnd"
       ? "bg-rose-500"
       : "bg-emerald-500";
+// Core module export or function definition that implements this feature.
   const statusGlowEffect =
     rawStatus === "online"
       ? "drop-shadow-[0_0_12px_rgba(16,185,129,0.8)]"
@@ -144,16 +159,25 @@ export const DiscordCard: FC = () => {
       ? "drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]"
       : "drop-shadow-[0_0_12px_rgba(16,185,129,0.8)]";
 
+// Core module export or function definition that implements this feature.
   const activityText = presence.activity || (hasMounted && cardState.discordManualActivity) || "Coding in VS Code";
+// Core module export or function definition that implements this feature.
   const inviteUrl = cardState.discordInviteUrl || profile.actionUrl || "https://discord.gg/zjq6VYAX7h";
+// Core module export or function definition that implements this feature.
   const statusLabel = displayStatus;
+// Core module export or function definition that implements this feature.
   const serverCount = presence.serverCount && presence.serverCount !== "0" ? presence.serverCount : "3";
+// Core module export or function definition that implements this feature.
   const servers = presence.servers.length > 0 ? presence.servers : ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"];
+// Core module export or function definition that implements this feature.
   const customStatus = presence.customStatus || "Developing Next.js 15 Apple Glass Portfolio 🚀";
+// Core module export or function definition that implements this feature.
   const botOnline = presence.botOnline !== false;
+// Core module export or function definition that implements this feature.
   const discordBadgeClasses = botOnline
-    ? "discord-loading-glow p-1.5 rounded-full bg-indigo-500/25 text-indigo-100 border border-indigo-400/30 flex items-center gap-1 text-xs font-semibold px-2.5 shadow-[0_0_18px_rgba(255,255,255,0.22)]"
-    : "p-1.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1 text-xs font-semibold px-2.5";
+    ? "discord-loading-glow p-1.5 rounded-full bg-indigo-500/40 text-white border border-indigo-400/40 flex items-center gap-1 text-xs font-semibold px-2.5 shadow-[0_0_22px_rgba(88,101,242,0.35)]"
+    : "p-1.5 rounded-full bg-indigo-500/30 text-white/80 border border-indigo-500/30 flex items-center gap-1 text-xs font-semibold px-2.5";
+// Core module export or function definition that implements this feature.
   const stats = profile.stats;
 
   return (
@@ -199,23 +223,23 @@ export const DiscordCard: FC = () => {
           </a>
         </div>
 
-        <div className="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-500/30 space-y-2">
-          <div className="flex items-center justify-between text-xs text-indigo-300 font-bold uppercase tracking-wider">
+        <div className="bg-indigo-950/80 sm:bg-indigo-950/40 p-4 rounded-2xl border border-indigo-500/40 sm:border-indigo-500/30 space-y-2">
+          <div className="flex items-center justify-between text-xs text-indigo-200 sm:text-indigo-300 font-bold uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
               <Terminal size={14} className="text-emerald-400" />
               Current Activity
             </span>
           </div>
           <p className="text-sm text-white font-semibold flex items-center gap-2">
-            <Sparkles size={16} className="text-indigo-400" />
+            <Sparkles size={16} className="text-indigo-300" />
             {customStatus}
           </p>
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-white/80 sm:text-white/60 mt-2">
             {activityText}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">
+        <div className="grid grid-cols-3 gap-3 bg-white/[0.16] sm:bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">
           {stats.map((stat) => (
             <div key={stat.label} className="space-y-0.5">
               <div className={`text-xl sm:text-2xl font-extrabold text-white ${
@@ -229,7 +253,7 @@ export const DiscordCard: FC = () => {
                   ? "Admin"
                   : stat.value}
               </div>
-              <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">{stat.label}</div>
+              <div className="text-xs text-white/90 sm:text-white/50 uppercase tracking-wider font-semibold">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -243,7 +267,7 @@ export const DiscordCard: FC = () => {
             {servers.map((server, idx) => (
               <span
                 key={idx}
-                className="px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white/80 font-medium flex items-center gap-2 hover:border-indigo-500/40 transition-colors"
+                className="px-3.5 py-2 rounded-xl bg-white/[0.20] sm:bg-white/[0.04] border border-white/10 text-xs text-white/80 font-medium flex items-center gap-2 hover:border-indigo-500/40 transition-colors"
               >
                 <span className="w-2 h-2 rounded-full bg-indigo-400" />
                 {server}

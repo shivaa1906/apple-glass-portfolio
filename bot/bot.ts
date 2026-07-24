@@ -1,3 +1,4 @@
+import http from "http";
 import fs from "fs/promises";
 import path from "path";
 import dotenv from "dotenv";
@@ -714,4 +715,20 @@ client.on("interactionCreate", async (interaction) => {
 client.login(BOT_TOKEN).catch((error) => {
   console.error("Discord bot failed to login:", error);
   process.exit(1);
+});
+
+const port = Number(process.env.PORT) || 3000;
+const server = http.createServer((req, res) => {
+  if (req.url === "/healthz" || req.url === "/") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", uptime: process.uptime() }));
+    return;
+  }
+
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Not found" }));
+});
+
+server.listen(port, () => {
+  console.log(`Bot HTTP health server listening on port ${port}`);
 });

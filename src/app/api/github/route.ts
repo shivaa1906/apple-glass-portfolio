@@ -1,7 +1,12 @@
+// File: app/api/github/route.ts
+// Description: GitHub profile API route with repo and contribution data.
+
 import { NextResponse } from "next/server";
 
+// Core module export or function definition that implements this feature.
 export const revalidate = 300;
 
+// Type definition used to describe the structure of data in this component.
 type GitHubUserResponse = {
   login: string;
   avatar_url: string;
@@ -10,6 +15,7 @@ type GitHubUserResponse = {
   public_repos: number;
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubRepoResponse = {
   id: number;
   name: string;
@@ -21,15 +27,18 @@ type GitHubRepoResponse = {
   updated_at: string;
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionDay = {
   contributionCount: number;
   date: string;
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionWeek = {
   contributionDays: GitHubContributionDay[];
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionCalendar = {
   totalContributions: number;
   weeks: GitHubContributionWeek[];
@@ -50,10 +59,13 @@ const formatCompactCount = (value: number) => {
 };
 
 export async function GET() {
+// Core module export or function definition that implements this feature.
   const configuredUsername = process.env.GITHUB_USERNAME;
+// Core module export or function definition that implements this feature.
   const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_API_TOKEN;
 
   try {
+// Core module export or function definition that implements this feature.
     const headers = {
       Accept: "application/vnd.github+json",
       "User-Agent": "apple-glass-portfolio",
@@ -62,12 +74,14 @@ export async function GET() {
 
     let username = configuredUsername || "shivaa1906";
 
+// Core module export or function definition that implements this feature.
     const userResponse = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
       next: { revalidate: 300 },
       headers,
     });
 
     if (!userResponse.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await userResponse.text();
       console.error("GitHub user API error:", errorBody);
 
@@ -77,12 +91,14 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const userData: GitHubUserResponse = await userResponse.json();
 
     if (githubToken && userData.login) {
       username = userData.login;
     }
 
+// Core module export or function definition that implements this feature.
     const reposResponse = await fetch(
       `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100&sort=updated`,
       {
@@ -95,6 +111,7 @@ export async function GET() {
     );
 
     if (!reposResponse.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await reposResponse.text();
       console.error("GitHub repos API error:", errorBody);
 
@@ -104,8 +121,10 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const reposData: GitHubRepoResponse[] = await reposResponse.json();
     const totalStars = reposData.reduce((sum, repo) => sum + repo.stargazers_count, 0);
+// Core module export or function definition that implements this feature.
     const sortedRepos = [...reposData]
       .sort((a, b) => b.stargazers_count - a.stargazers_count || Number(new Date(b.updated_at)) - Number(new Date(a.updated_at)))
       .slice(0, 12)
@@ -125,9 +144,12 @@ export async function GET() {
     };
 
     if (githubToken) {
+// Core module export or function definition that implements this feature.
       const fromDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+// Core module export or function definition that implements this feature.
       const toDate = new Date().toISOString();
 
+// Core module export or function definition that implements this feature.
       const graphqlResponse = await fetch("https://api.github.com/graphql", {
         method: "POST",
         headers: {
@@ -164,7 +186,9 @@ export async function GET() {
       });
 
       if (graphqlResponse.ok) {
+// Core module export or function definition that implements this feature.
         const graphqlData = await graphqlResponse.json();
+// Core module export or function definition that implements this feature.
         const collection = graphqlData?.data?.user?.contributionsCollection;
 
         if (collection?.contributionCalendar) {
@@ -179,6 +203,7 @@ export async function GET() {
           };
         }
       } else {
+// Core module export or function definition that implements this feature.
         const errorBody = await graphqlResponse.text();
         console.error("GitHub GraphQL API error:", errorBody);
       }

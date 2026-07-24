@@ -1,15 +1,21 @@
+// File: app/layout.tsx
+// Description: Application layout for HTML structure and global metadata.
+
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
+// Core module export or function definition that implements this feature.
 const inter = Inter({ subsets: ["latin"] });
 
+// Core module export or function definition that implements this feature.
 export const viewport: Viewport = {
   themeColor: "#050505",
   width: "device-width",
   initialScale: 1,
 };
 
+// Core module export or function definition that implements this feature.
 export const metadata: Metadata = {
   metadataBase: new URL("https://shivaxroy.dev"),
   title: "Shivaxroy — Premium Apple Glass Social Portfolio",

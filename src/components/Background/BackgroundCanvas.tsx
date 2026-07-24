@@ -1,7 +1,11 @@
 "use client";
 
+// File: components/Background/BackgroundCanvas.tsx
+// Description: Procedural background canvas with animated particles.
+
 import React, { useEffect, useRef } from "react";
 
+// Interface definition used for typed data structures.
 interface Particle {
   x: number;
   y: number;
@@ -14,16 +18,20 @@ interface Particle {
 }
 
 export const BackgroundCanvas: React.FC = () => {
+// Core module export or function definition that implements this feature.
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+// Core module export or function definition that implements this feature.
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+// Core module export or function definition that implements this feature.
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let animationFrameId: number;
+// Core module export or function definition that implements this feature.
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let width = window.innerWidth;
     let height = window.innerHeight;
@@ -63,8 +71,10 @@ export const BackgroundCanvas: React.FC = () => {
     const particleCount = isMobile 
       ? Math.min(40, Math.floor((width * height) / 36000))
       : Math.min(80, Math.floor((width * height) / 18000));
+// Core module export or function definition that implements this feature.
     const particles: Particle[] = [];
 
+// Core module export or function definition that implements this feature.
     const colors = [
       "rgba(10, 132, 255, ", // Apple Blue
       "rgba(168, 85, 247, ", // Aurora Purple
@@ -73,6 +83,7 @@ export const BackgroundCanvas: React.FC = () => {
     ];
 
     for (let i = 0; i < particleCount; i++) {
+// Core module export or function definition that implements this feature.
       const baseAlpha = Math.random() * 0.4 + 0.1;
       particles.push({
         x: Math.random() * width,
@@ -105,7 +116,9 @@ export const BackgroundCanvas: React.FC = () => {
 
       // Radial Aurora Glow 1 - Apple Blue (reduced on mobile)
       const blob1X = width * 0.3 + Math.sin(time * 0.6) * 120 + (isMobile ? 0 : (mouseX - width / 2) * 0.05);
+// Core module export or function definition that implements this feature.
       const blob1Y = height * 0.4 + Math.cos(time * 0.8) * 100 + (isMobile ? 0 : (mouseY - height / 2) * 0.05);
+// Core module export or function definition that implements this feature.
       const grad1 = ctx.createRadialGradient(blob1X, blob1Y, 50, blob1X, blob1Y, 550);
       grad1.addColorStop(0, isMobile ? "rgba(10, 132, 255, 0.06)" : "rgba(10, 132, 255, 0.12)");
       grad1.addColorStop(0.5, isMobile ? "rgba(10, 132, 255, 0.02)" : "rgba(10, 132, 255, 0.04)");
@@ -115,7 +128,9 @@ export const BackgroundCanvas: React.FC = () => {
 
       // Radial Aurora Glow 2 - Deep Violet (reduced on mobile)
       const blob2X = width * 0.7 + Math.cos(time * 0.5) * 140 + (isMobile ? 0 : -(mouseX - width / 2) * 0.03);
+// Core module export or function definition that implements this feature.
       const blob2Y = height * 0.6 + Math.sin(time * 0.7) * 120 + (isMobile ? 0 : -(mouseY - height / 2) * 0.03);
+// Core module export or function definition that implements this feature.
       const grad2 = ctx.createRadialGradient(blob2X, blob2Y, 40, blob2X, blob2Y, 600);
       grad2.addColorStop(0, isMobile ? "rgba(147, 51, 234, 0.04)" : "rgba(147, 51, 234, 0.09)");
       grad2.addColorStop(0.6, isMobile ? "rgba(79, 70, 229, 0.01)" : "rgba(79, 70, 229, 0.03)");

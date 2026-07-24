@@ -1,7 +1,11 @@
+// File: app/api/contact/route.ts
+// Description: Contact API route for submitting messages.
+
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
+// Core module export or function definition that implements this feature.
     const { name, email, message, webhookUrl } = await request.json();
 
     if (!name || !email || !message) {
@@ -53,6 +57,7 @@ export async function POST(request: Request) {
     };
 
     if (targetWebhookUrl && targetWebhookUrl.startsWith("https://discord.com/api/webhooks/")) {
+// Core module export or function definition that implements this feature.
       const response = await fetch(targetWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,6 +75,7 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     console.error("Contact API Route Error:", error);
+// Core module export or function definition that implements this feature.
     const message = error instanceof Error ? error.message : "Internal Server Error";
 
     return NextResponse.json(

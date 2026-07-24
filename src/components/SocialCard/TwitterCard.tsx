@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/TwitterCard.tsx
+// Description: Twitter social card showing follower counts and engagement.
+
 import React, { useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -10,12 +13,18 @@ import { useCardState } from "@/lib/useCardState";
 
 export const TwitterCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "twitter")!;
+// Core module export or function definition that implements this feature.
   const cardState = useCardState();
+// Core module export or function definition that implements this feature.
   const tweetData = profile.details?.pinnedTweet;
 
+// Core module export or function definition that implements this feature.
   const [likes, setLikes] = useState(tweetData?.likes || 3420);
+// Core module export or function definition that implements this feature.
   const [hasLiked, setHasLiked] = useState(false);
+// Core module export or function definition that implements this feature.
   const [retweets, setRetweets] = useState(tweetData?.retweets || 890);
+// Core module export or function definition that implements this feature.
   const [hasRetweeted, setHasRetweeted] = useState(false);
 
   const toggleLike = () => {

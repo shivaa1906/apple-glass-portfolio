@@ -1,7 +1,11 @@
+// File: app/api/card-state/route.ts
+// Description: API route for loading card state from the backend.
+
 import fs from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 
+// Type definition used to describe the structure of data in this component.
 type CardState = {
   editableWebhookUrl?: string;
   botLogsEnabled?: boolean;
@@ -23,8 +27,10 @@ type CardState = {
   heroStatus?: string;
 };
 
+// Core module export or function definition that implements this feature.
 const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
 
+// Core module export or function definition that implements this feature.
 const DEFAULT_STATE: CardState = {
   editableWebhookUrl: "",
   botLogsEnabled: true,
@@ -48,7 +54,9 @@ const DEFAULT_STATE: CardState = {
 
 const readState = async (): Promise<CardState> => {
   try {
+// Core module export or function definition that implements this feature.
     const raw = await fs.readFile(STATE_PATH, "utf8");
+// Core module export or function definition that implements this feature.
     const parsed = JSON.parse(raw) as CardState;
     return {
       ...DEFAULT_STATE,
@@ -69,6 +77,7 @@ const writeState = async (state: CardState) => {
 };
 
 export async function GET() {
+// Core module export or function definition that implements this feature.
   const state = await readState();
   return NextResponse.json(state, {
     headers: {
@@ -79,8 +88,11 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+// Core module export or function definition that implements this feature.
     const updates = (await request.json()) as Partial<CardState>;
+// Core module export or function definition that implements this feature.
     const currentState = await readState();
+// Core module export or function definition that implements this feature.
     const nextState = {
       ...currentState,
       ...updates,

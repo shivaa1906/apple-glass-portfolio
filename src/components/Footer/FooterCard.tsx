@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/Footer/FooterCard.tsx
+// Description: Footer section with contact and support information.
+
 import { type FC, type FormEvent, useState } from "react";
 import { CardContainer } from "../SocialCard/CardContainer";
 import { HERO_DATA } from "@/data/socialData";
@@ -7,13 +10,16 @@ import { Send, ArrowUp, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export const FooterCard: FC = () => {
+// Core module export or function definition that implements this feature.
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     message: "",
     webhookUrl: "",
   });
+// Core module export or function definition that implements this feature.
   const [isSubmitting, setIsSubmitting] = useState(false);
+// Core module export or function definition that implements this feature.
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {

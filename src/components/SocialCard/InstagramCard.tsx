@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/InstagramCard.tsx
+// Description: Instagram social card displaying latest posts and follower data.
+
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -7,6 +10,7 @@ import { CardContainer } from "./CardContainer";
 import { Heart, MessageCircle, ExternalLink, Sparkles } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/SocialBrandIcons";
 
+// Type definition used to describe the structure of data in this component.
 type InstagramProfileResponse = {
   username: string;
   followers_count: number;
@@ -15,6 +19,7 @@ type InstagramProfileResponse = {
   profile_picture_url: string;
 };
 
+// Type definition used to describe the structure of data in this component.
 type InstagramPostResponse = {
   id: string;
   caption: string;
@@ -42,12 +47,16 @@ export const InstagramCard: React.FC = () => {
 
   // Live profile state used to replace the static Instagram values.
   const [instagramProfile, setInstagramProfile] = useState<InstagramProfileResponse | null>(null);
+// Core module export or function definition that implements this feature.
   const [profileLoading, setProfileLoading] = useState(true);
+// Core module export or function definition that implements this feature.
   const [profileError, setProfileError] = useState<string | null>(null);
 
   // The latest 3 public posts are pulled from the Instagram posts API route.
   const [featuredPosts, setFeaturedPosts] = useState<InstagramPostResponse[]>([]);
+// Core module export or function definition that implements this feature.
   const [postsLoading, setPostsLoading] = useState(true);
+// Core module export or function definition that implements this feature.
   const [postsError, setPostsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,6 +70,7 @@ export const InstagramCard: React.FC = () => {
         setProfileError(null);
         setPostsError(null);
 
+// Core module export or function definition that implements this feature.
         const [profileResponse, postsResponse] = await Promise.all([
           fetch("/api/instagram", {
             cache: "no-store",
@@ -80,7 +90,9 @@ export const InstagramCard: React.FC = () => {
           throw new Error("Unable to load latest Instagram posts.");
         }
 
+// Core module export or function definition that implements this feature.
         const profileData: InstagramProfileResponse = await profileResponse.json();
+// Core module export or function definition that implements this feature.
         const postsData = await postsResponse.json();
 
         if (!isMounted) return;
@@ -88,6 +100,7 @@ export const InstagramCard: React.FC = () => {
         setFeaturedPosts(Array.isArray(postsData.posts) ? postsData.posts : []);
       } catch (error) {
         if (!isMounted) return;
+// Core module export or function definition that implements this feature.
         const message = error instanceof Error ? error.message : "Something went wrong while loading Instagram data.";
         setProfileError(message);
         setPostsError(message);
@@ -132,6 +145,7 @@ export const InstagramCard: React.FC = () => {
   // Use the live avatar when available; otherwise, preserve a local placeholder so the card
   // layout remains stable while the API data is still loading.
   const avatarUrl = instagramProfile?.profile_picture_url || profile.avatar || "/assets/profile_avatar1.jpg";
+// Core module export or function definition that implements this feature.
   const displayHandle = instagramProfile?.username ? `@${instagramProfile.username}` : profile.handle;
 
   return (

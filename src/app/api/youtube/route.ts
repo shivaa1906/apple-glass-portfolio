@@ -1,5 +1,9 @@
+// File: app/api/youtube/route.ts
+// Description: YouTube API route for channel statistics.
+
 import { NextResponse } from "next/server";
 
+// Core module export or function definition that implements this feature.
 export const revalidate = 300;
 
 const formatCompactCount = (value: number) => {
@@ -17,36 +21,45 @@ const formatCompactCount = (value: number) => {
 };
 
 const formatTimeAgo = (isoString: string) => {
+// Core module export or function definition that implements this feature.
   const publishedAt = new Date(isoString).getTime();
+// Core module export or function definition that implements this feature.
   const diffMs = Date.now() - publishedAt;
 
   if (!Number.isFinite(publishedAt) || diffMs < 0) {
     return "Recently";
   }
 
+// Core module export or function definition that implements this feature.
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   if (diffHours < 24) {
     return diffHours <= 1 ? "1 hour ago" : `${diffHours} hours ago`;
   }
 
+// Core module export or function definition that implements this feature.
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) {
     return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
   }
 
+// Core module export or function definition that implements this feature.
   const diffWeeks = Math.floor(diffDays / 7);
   return diffWeeks === 1 ? "1 week ago" : `${diffWeeks} weeks ago`;
 };
 
 const formatDuration = (duration: string) => {
+// Core module export or function definition that implements this feature.
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
 
   if (!match) {
     return "0:00";
   }
 
+// Core module export or function definition that implements this feature.
   const hours = Number(match[1] ?? 0);
+// Core module export or function definition that implements this feature.
   const minutes = Number(match[2] ?? 0);
+// Core module export or function definition that implements this feature.
   const seconds = Number(match[3] ?? 0);
 
   if (hours > 0) {
@@ -56,6 +69,7 @@ const formatDuration = (duration: string) => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
+// Type definition used to describe the structure of data in this component.
 type YouTubeVideoApiItem = {
   id: string;
   snippet?: {
@@ -76,7 +90,9 @@ type YouTubeVideoApiItem = {
 };
 
 export async function GET() {
+// Core module export or function definition that implements this feature.
   const apiKey = process.env.YOUTUBE_API_KEY;
+// Core module export or function definition that implements this feature.
   const channelId = process.env.YOUTUBE_CHANNEL_ID;
 
   if (!apiKey || !channelId) {
@@ -89,8 +105,10 @@ export async function GET() {
   }
 
   try {
+// Core module export or function definition that implements this feature.
     const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${encodeURIComponent(channelId)}&key=${encodeURIComponent(apiKey)}`;
 
+// Core module export or function definition that implements this feature.
     const channelResponse = await fetch(channelUrl, {
       next: { revalidate: 300 },
       headers: {
@@ -99,6 +117,7 @@ export async function GET() {
     });
 
     if (!channelResponse.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await channelResponse.text();
       console.error("YouTube channel API error:", errorBody);
 
@@ -108,11 +127,17 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const channelData = await channelResponse.json();
+// Core module export or function definition that implements this feature.
     const channel = channelData.items?.[0];
+// Core module export or function definition that implements this feature.
     const statistics = channel?.statistics;
+// Core module export or function definition that implements this feature.
     const uploadsPlaylistId = channel?.contentDetails?.relatedPlaylists?.uploads;
+// Core module export or function definition that implements this feature.
     const profilePictureUrl = channel?.snippet?.thumbnails?.high?.url || channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || "";
+// Core module export or function definition that implements this feature.
     const channelTitle = channel?.snippet?.title || "";
 
     if (!statistics || !uploadsPlaylistId) {
@@ -122,6 +147,7 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const playlistResponse = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(uploadsPlaylistId)}&maxResults=8&key=${encodeURIComponent(apiKey)}`,
       {
@@ -133,6 +159,7 @@ export async function GET() {
     );
 
     if (!playlistResponse.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await playlistResponse.text();
       console.error("YouTube playlist API error:", errorBody);
 
@@ -142,7 +169,9 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const playlistData = await playlistResponse.json();
+// Core module export or function definition that implements this feature.
     const videoIds = (playlistData.items ?? [])
       .map((item: { snippet?: { resourceId?: { videoId?: string } } }) => item.snippet?.resourceId?.videoId)
       .filter(Boolean)
@@ -159,6 +188,7 @@ export async function GET() {
     }> = [];
 
     if (videoIds) {
+// Core module export or function definition that implements this feature.
       const videosResponse = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${encodeURIComponent(videoIds)}&key=${encodeURIComponent(apiKey)}`,
         {
@@ -170,6 +200,7 @@ export async function GET() {
       );
 
       if (videosResponse.ok) {
+// Core module export or function definition that implements this feature.
         const videosData = await videosResponse.json();
 
         videos = (videosData.items ?? []).map((item: YouTubeVideoApiItem) => ({

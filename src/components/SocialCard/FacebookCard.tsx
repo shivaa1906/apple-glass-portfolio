@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/FacebookCard.tsx
+// Description: Facebook social card with page stats and recent post preview.
+
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -8,6 +11,7 @@ import { ThumbsUp, Share2, ExternalLink, Globe } from "lucide-react";
 import { FacebookIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 
+// Type definition used to describe the structure of data in this component.
 type FacebookProfileResponse = {
   name: string;
   username?: string;
@@ -27,14 +31,22 @@ const ensureHandle = (username: string) => {
 
 export const FacebookCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "facebook")!;
+// Core module export or function definition that implements this feature.
   const [facebookProfile, setFacebookProfile] = useState<FacebookProfileResponse | null>(null);
+// Core module export or function definition that implements this feature.
   const [displayFollowers, setDisplayFollowers] = useState(profile.stats[0].value);
+// Core module export or function definition that implements this feature.
   const [displayLikes, setDisplayLikes] = useState(profile.stats[1].value);
+// Core module export or function definition that implements this feature.
   const followerAnimationRef = useRef<number | null>(null);
+// Core module export or function definition that implements this feature.
   const likeAnimationRef = useRef<number | null>(null);
+// Core module export or function definition that implements this feature.
   const previousFollowersRef = useRef<number | null>(null);
+// Core module export or function definition that implements this feature.
   const previousLikesRef = useRef<number | null>(null);
 
+// Core module export or function definition that implements this feature.
   const animateValue = (
     from: number,
     to: number,
@@ -45,11 +57,15 @@ export const FacebookCard: React.FC = () => {
       cancelAnimationFrame(frameRef.current);
     }
 
+// Core module export or function definition that implements this feature.
     const duration = 500;
+// Core module export or function definition that implements this feature.
     const startTime = performance.now();
 
     const step = (timestamp: number) => {
+// Core module export or function definition that implements this feature.
       const progress = Math.min((timestamp - startTime) / duration, 1);
+// Core module export or function definition that implements this feature.
       const current = Math.round(from + (to - from) * progress);
       setter(formatNumber(current));
 
@@ -65,6 +81,7 @@ export const FacebookCard: React.FC = () => {
 
   const fetchFacebookData = async () => {
     try {
+// Core module export or function definition that implements this feature.
       const response = await fetch("/api/facebook/page", {
         cache: "no-store",
         headers: { "ngrok-skip-browser-warning": "true" },
@@ -73,6 +90,7 @@ export const FacebookCard: React.FC = () => {
         throw new Error("Unable to load Facebook page data.");
       }
 
+// Core module export or function definition that implements this feature.
       const data = await response.json();
       setFacebookProfile(data);
     } catch {
@@ -89,7 +107,9 @@ export const FacebookCard: React.FC = () => {
       void fetchFacebookData();
     }, 0);
 
+// Core module export or function definition that implements this feature.
     const followerFrame = followerAnimationRef.current;
+// Core module export or function definition that implements this feature.
     const likeFrame = likeAnimationRef.current;
 
     return () => {
@@ -101,7 +121,9 @@ export const FacebookCard: React.FC = () => {
 
   useEffect(() => {
     if (facebookProfile?.followers_count != null) {
+// Core module export or function definition that implements this feature.
       const target = facebookProfile.followers_count;
+// Core module export or function definition that implements this feature.
       const previous = previousFollowersRef.current ?? target;
       if (previous !== target) {
         animateValue(previous, target, setDisplayFollowers, followerAnimationRef);
@@ -114,7 +136,9 @@ export const FacebookCard: React.FC = () => {
 
   useEffect(() => {
     if (facebookProfile?.fan_count != null) {
+// Core module export or function definition that implements this feature.
       const target = facebookProfile.fan_count;
+// Core module export or function definition that implements this feature.
       const previous = previousLikesRef.current ?? target;
       if (previous !== target) {
         animateValue(previous, target, setDisplayLikes, likeAnimationRef);
@@ -125,14 +149,23 @@ export const FacebookCard: React.FC = () => {
     }
   }, [facebookProfile?.fan_count]);
 
+// Core module export or function definition that implements this feature.
   const coverUrl = facebookProfile?.cover || (typeof profile.details?.cover === "string" ? profile.details.cover : "/assets/profile_avatar1.jpg");
+// Core module export or function definition that implements this feature.
   const avatarUrl = facebookProfile?.picture || profile.avatar || "/assets/profile_avatar1.jpg";
+// Core module export or function definition that implements this feature.
   const cardState = useCardState();
+// Core module export or function definition that implements this feature.
   const displayName = facebookProfile?.name || profile.name;
+// Core module export or function definition that implements this feature.
   const displayHandle = facebookProfile?.username ? ensureHandle(facebookProfile.username) : profile.handle;
+// Core module export or function definition that implements this feature.
   const followersValue = facebookProfile?.followers_count != null ? displayFollowers : profile.stats[0].value;
+// Core module export or function definition that implements this feature.
   const likesValue = facebookProfile?.fan_count != null ? displayLikes : profile.stats[1].value;
+// Core module export or function definition that implements this feature.
   const communityValue = profile.stats[2].value;
+// Core module export or function definition that implements this feature.
   const featuredPost = {
     text:
       cardState.facebookAnnouncementText || profile.details?.featuredPost?.text || "",
@@ -141,6 +174,7 @@ export const FacebookCard: React.FC = () => {
     likes: profile.details?.featuredPost?.likes,
     shares: profile.details?.featuredPost?.shares,
   };
+// Core module export or function definition that implements this feature.
   const actionUrl = facebookProfile?.link || profile.actionUrl;
 
   return (

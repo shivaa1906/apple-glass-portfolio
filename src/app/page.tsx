@@ -1,5 +1,8 @@
 "use client";
 
+// File: app/page.tsx
+// Description: Root page component that assembles all app sections.
+
 import React from "react";
 import { LenisProvider } from "@/components/SmoothScroll/LenisProvider";
 import { BackgroundCanvas } from "@/components/Background/BackgroundCanvas";

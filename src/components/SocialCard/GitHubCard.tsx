@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/GitHubCard.tsx
+// Description: GitHub social card component displaying contribution and repo stats.
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -7,23 +10,28 @@ import { CardContainer } from "./CardContainer";
 import { Star, GitFork, Code2, ExternalLink, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { GitHubIcon } from "@/components/Icons/SocialBrandIcons";
 
+// Type definition used to describe the structure of data in this component.
 type ContributionLevel = "NONE" | "FIRST_QUARTILE" | "SECOND_QUARTILE" | "THIRD_QUARTILE" | "FOURTH_QUARTILE";
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionDay = {
   contributionCount: number;
   date: string;
   contributionLevel: ContributionLevel;
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionWeek = {
   contributionDays: GitHubContributionDay[];
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubContributionsCalendar = {
   totalContributions: number;
   weeks: GitHubContributionWeek[];
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubProfileResponse = {
   login: string;
   avatarUrl: string;
@@ -35,6 +43,7 @@ type GitHubProfileResponse = {
   repos: GitHubRepo[];
 };
 
+// Type definition used to describe the structure of data in this component.
 type GitHubRepo = {
   id: number;
   name: string;
@@ -62,6 +71,7 @@ const formatCount = (value: number) => {
 const formatCalendarDate = (value: string) => {
   if (!value) return "unknown date";
 
+// Core module export or function definition that implements this feature.
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) {
     return value;
@@ -77,13 +87,17 @@ const formatCalendarDate = (value: string) => {
 const formatCalendarTooltip = (value: string, count: number) => {
   if (!value) return "Unknown date";
 
+// Core module export or function definition that implements this feature.
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) {
+// Core module export or function definition that implements this feature.
     const suffix = count === 1 ? "contribution" : "contributions";
     return `${count === 0 ? "No contributions" : `${count} ${suffix}`} on ${value}`;
   }
 
+// Core module export or function definition that implements this feature.
   const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(parsed);
+// Core module export or function definition that implements this feature.
   const formattedDate = formatCalendarDate(value);
   if (count === 0) {
     return `No contributions on ${weekday}, ${formattedDate}`;
@@ -107,6 +121,7 @@ const contributionLevelToColor = (level: ContributionLevel) => {
   }
 };
 
+// Core module export or function definition that implements this feature.
 const areContributionCalendarsEqual = (
   a: GitHubContributionsCalendar,
   b: GitHubContributionsCalendar
@@ -120,12 +135,14 @@ const areContributionCalendarsEqual = (
   }
 
   return a.weeks.every((week, weekIndex) => {
+// Core module export or function definition that implements this feature.
     const otherWeek = b.weeks[weekIndex];
     if (!otherWeek || week.contributionDays.length !== otherWeek.contributionDays.length) {
       return false;
     }
 
     return week.contributionDays.every((day, dayIndex) => {
+// Core module export or function definition that implements this feature.
       const otherDay = otherWeek.contributionDays[dayIndex];
       return (
         otherDay &&
@@ -139,13 +156,21 @@ const areContributionCalendarsEqual = (
 
 export const GitHubCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "github")!;
+// Core module export or function definition that implements this feature.
   const [githubData, setGithubData] = useState<GitHubProfileResponse | null>(null);
+// Core module export or function definition that implements this feature.
   const [statsLoading, setStatsLoading] = useState(true);
+// Core module export or function definition that implements this feature.
   const [statsError, setStatsError] = useState<string | null>(null);
+// Core module export or function definition that implements this feature.
   const [contributionCalendar, setContributionCalendar] = useState<GitHubContributionsCalendar | null>(null);
+// Core module export or function definition that implements this feature.
   const contributionCacheRef = useRef<GitHubContributionsCalendar | null>(null);
+// Core module export or function definition that implements this feature.
   const [currentPage, setCurrentPage] = useState(0);
+// Core module export or function definition that implements this feature.
   const [dragStartX, setDragStartX] = useState<number | null>(null);
+// Core module export or function definition that implements this feature.
   const repoSliderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -154,6 +179,7 @@ export const GitHubCard: React.FC = () => {
         setStatsLoading(true);
         setStatsError(null);
 
+// Core module export or function definition that implements this feature.
         const response = await fetch("/api/github", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
@@ -162,10 +188,12 @@ export const GitHubCard: React.FC = () => {
           throw new Error("Unable to load live GitHub profile information.");
         }
 
+// Core module export or function definition that implements this feature.
         const data: GitHubProfileResponse = await response.json();
         setGithubData(data);
         setCurrentPage(0);
       } catch (error) {
+// Core module export or function definition that implements this feature.
         const message = error instanceof Error ? error.message : "Something went wrong while loading GitHub data.";
         setStatsError(message);
       } finally {
@@ -184,6 +212,7 @@ export const GitHubCard: React.FC = () => {
   useEffect(() => {
     const syncContributionCalendar = async () => {
       try {
+// Core module export or function definition that implements this feature.
         const response = await fetch("/api/github/contributions", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
@@ -191,12 +220,14 @@ export const GitHubCard: React.FC = () => {
           throw new Error("Unable to load GitHub contributions.");
         }
 
+// Core module export or function definition that implements this feature.
         const data: GitHubContributionsCalendar = await response.json();
         if (!contributionCacheRef.current || !areContributionCalendarsEqual(contributionCacheRef.current, data)) {
           setContributionCalendar(data);
           contributionCacheRef.current = data;
         }
       } catch (error) {
+// Core module export or function definition that implements this feature.
         const message = error instanceof Error ? error.message : "Unable to load GitHub contributions.";
         console.error(message);
         setContributionCalendar((current) => current ?? { totalContributions: 0, weeks: [] });
@@ -212,9 +243,11 @@ export const GitHubCard: React.FC = () => {
   }, []);
 
   const contributionDays = useMemo(() => {
+// Core module export or function definition that implements this feature.
     const weeks = contributionCalendar?.weeks ?? [];
 
     const createEmptyDay = (index: number) => {
+// Core module export or function definition that implements this feature.
       const date = new Date();
       date.setDate(date.getDate() - (364 - index));
 
@@ -226,7 +259,8 @@ export const GitHubCard: React.FC = () => {
       };
     };
 
-    if (weeks.length === 0) {
+    const hasContributionDays = weeks.some((week) => week.contributionDays.length > 0);
+    if (!hasContributionDays) {
       return Array.from({ length: 53 * 7 }, (_, index) => createEmptyDay(index));
     }
 
@@ -241,17 +275,22 @@ export const GitHubCard: React.FC = () => {
   }, [contributionCalendar]);
 
   const monthLabelPositions = useMemo(() => {
+// Core module export or function definition that implements this feature.
     const weeks = contributionCalendar?.weeks ?? [];
+// Core module export or function definition that implements this feature.
     const monthLabels: Array<{ label: string; index: number }> = [];
 
     let lastMonth = -1;
     weeks.forEach((week, index) => {
+// Core module export or function definition that implements this feature.
       const firstDay = week.contributionDays[0];
       if (!firstDay || !firstDay.date) {
         return;
       }
 
+// Core module export or function definition that implements this feature.
       const parsed = new Date(firstDay.date);
+// Core module export or function definition that implements this feature.
       const month = parsed.getMonth();
       if (month !== lastMonth) {
         monthLabels.push({
@@ -284,8 +323,11 @@ export const GitHubCard: React.FC = () => {
     ];
   }, [githubData, profile.stats]);
 
+// Core module export or function definition that implements this feature.
   const displayRepos = githubData?.repos ?? [];
+// Core module export or function definition that implements this feature.
   const visibleRepos = displayRepos.slice(currentPage * 3, currentPage * 3 + 3);
+// Core module export or function definition that implements this feature.
   const totalPages = Math.max(1, Math.ceil(displayRepos.length / 3));
 
   const handlePrev = () => setCurrentPage((page) => Math.max(page - 1, 0));
@@ -300,6 +342,7 @@ export const GitHubCard: React.FC = () => {
       return;
     }
 
+// Core module export or function definition that implements this feature.
     const delta = clientX - dragStartX;
     if (delta > 40) {
       handlePrev();

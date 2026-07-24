@@ -1,14 +1,22 @@
 "use client";
 
+// File: components/CursorGlow/CursorGlow.tsx
+// Description: Custom cursor glow element with spring motion.
+
 import React, { useEffect, useState } from "react";
 import { motion, useSpring } from "framer-motion";
 
 export const CursorGlow: React.FC = () => {
+// Core module export or function definition that implements this feature.
   const [isVisible, setIsVisible] = useState(false);
+// Core module export or function definition that implements this feature.
   const [isMobile, setIsMobile] = useState(false);
 
+// Core module export or function definition that implements this feature.
   const springConfig = { damping: 28, stiffness: 220, mass: 0.5 };
+// Core module export or function definition that implements this feature.
   const cursorX = useSpring(-100, springConfig);
+// Core module export or function definition that implements this feature.
   const cursorY = useSpring(-100, springConfig);
 
   useEffect(() => {

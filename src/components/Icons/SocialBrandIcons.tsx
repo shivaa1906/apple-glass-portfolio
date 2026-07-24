@@ -1,3 +1,6 @@
+// File: components/Icons/SocialBrandIcons.tsx
+// Description: React icon components for social brand logos.
+
 import React from "react";
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {

@@ -1,9 +1,14 @@
+// File: app/api/discord/route.ts
+// Description: Discord presence API route to stream or fetch current status.
+
 import fs from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 
+// Core module export or function definition that implements this feature.
 const CACHE_PATH = path.join(process.cwd(), "bot", "discord-presence-cache.json");
 
+// Type definition used to describe the structure of data in this component.
 type DiscordPresencePayload = {
   username: string;
   displayName: string;
@@ -16,6 +21,7 @@ type DiscordPresencePayload = {
   botOnline: boolean;
 };
 
+// Core module export or function definition that implements this feature.
 const defaultResponse: DiscordPresencePayload = {
   username: "Unknown#0000",
   displayName: "Discord User",
@@ -28,6 +34,7 @@ const defaultResponse: DiscordPresencePayload = {
   botOnline: false,
 };
 
+// Type definition used to describe the structure of data in this component.
 type DiscordPresencePayloadInput = DiscordPresencePayload & { avatarUrl?: string };
 
 const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPresencePayload => ({
@@ -44,7 +51,9 @@ const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPr
 
 const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
   try {
+// Core module export or function definition that implements this feature.
     const raw = await fs.readFile(CACHE_PATH, "utf8");
+// Core module export or function definition that implements this feature.
     const parsed = JSON.parse(raw) as Partial<DiscordPresencePayload>;
     return normalizeState(parsed);
   } catch {
@@ -53,6 +62,7 @@ const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
 };
 
 const streamDiscordState = () => {
+// Core module export or function definition that implements this feature.
   const encoder = new TextEncoder();
   let interval: ReturnType<typeof setInterval> | null = null;
   let closed = false;
@@ -61,6 +71,7 @@ const streamDiscordState = () => {
     async start(controller) {
       const sendState = async () => {
         if (closed) return;
+// Core module export or function definition that implements this feature.
         const state = await readCachedPresence();
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(state)}\n\n`));
       };
@@ -80,7 +91,9 @@ const streamDiscordState = () => {
 };
 
 export async function GET(request: Request) {
+// Core module export or function definition that implements this feature.
   const url = new URL(request.url);
+// Core module export or function definition that implements this feature.
   const streamMode = request.headers.get("accept") === "text/event-stream" || url.searchParams.get("stream") === "1";
 
   if (streamMode) {
@@ -93,6 +106,7 @@ export async function GET(request: Request) {
     });
   }
 
+// Core module export or function definition that implements this feature.
   const state = await readCachedPresence();
   return NextResponse.json(state, {
     headers: {

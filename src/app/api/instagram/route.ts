@@ -1,11 +1,18 @@
+// File: app/api/instagram/route.ts
+// Description: Instagram API route for profile and posts data.
+
 import { NextResponse } from "next/server";
 
+// Core module export or function definition that implements this feature.
 export const dynamic = "force-dynamic";
+// Core module export or function definition that implements this feature.
 export const revalidate = 0;
 
 // The Graph API returns the current business account metadata for the live card.
 export async function GET() {
+// Core module export or function definition that implements this feature.
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+// Core module export or function definition that implements this feature.
   const businessId = process.env.INSTAGRAM_BUSINESS_ID;
 
   if (!accessToken || !businessId) {
@@ -21,6 +28,7 @@ export async function GET() {
     // Request only the profile fields needed by the card UI.
     const profileUrl = `https://graph.facebook.com/v22.0/${businessId}?fields=username,followers_count,follows_count,media_count,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`;
 
+// Core module export or function definition that implements this feature.
     const response = await fetch(profileUrl, {
       cache: "no-store",
       next: { revalidate: 0 },
@@ -30,6 +38,7 @@ export async function GET() {
     });
 
     if (!response.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await response.text();
       console.error("Instagram profile Graph API error:", errorBody);
 
@@ -39,6 +48,7 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const data = await response.json();
 
     return NextResponse.json(

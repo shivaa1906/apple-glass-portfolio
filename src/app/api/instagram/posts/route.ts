@@ -1,11 +1,18 @@
+// File: app/api/instagram/posts/route.ts
+// Description: API route handler for the corresponding data endpoint.
+
 import { NextResponse } from "next/server";
 
+// Core module export or function definition that implements this feature.
 export const dynamic = "force-dynamic";
+// Core module export or function definition that implements this feature.
 export const revalidate = 0;
 
 // Pull the latest three Instagram posts and expose the public fields needed by the UI.
 export async function GET() {
+// Core module export or function definition that implements this feature.
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+// Core module export or function definition that implements this feature.
   const businessId = process.env.INSTAGRAM_BUSINESS_ID;
 
   if (!accessToken || !businessId) {
@@ -22,6 +29,7 @@ export async function GET() {
     // that are displayed inside the existing card hover overlay.
     const mediaUrl = `https://graph.facebook.com/v22.0/${businessId}/media?fields=id,caption,media_url,permalink,timestamp&access_token=${encodeURIComponent(accessToken)}`;
 
+// Core module export or function definition that implements this feature.
     const response = await fetch(mediaUrl, {
       cache: "no-store",
       next: { revalidate: 0 },
@@ -31,6 +39,7 @@ export async function GET() {
     });
 
     if (!response.ok) {
+// Core module export or function definition that implements this feature.
       const errorBody = await response.text();
       console.error("Instagram media Graph API error:", errorBody);
 
@@ -40,9 +49,12 @@ export async function GET() {
       );
     }
 
+// Core module export or function definition that implements this feature.
     const data = await response.json();
+// Core module export or function definition that implements this feature.
     const rawItems: unknown[] = Array.isArray(data?.data) ? data.data : [];
 
+// Type definition used to describe the structure of data in this component.
     type InstagramMediaItem = {
       id: string;
       caption?: string;
@@ -51,6 +63,7 @@ export async function GET() {
       timestamp: string;
     };
 
+// Core module export or function definition that implements this feature.
     const posts = rawItems
       .filter((item): item is InstagramMediaItem =>
         typeof item === "object" &&

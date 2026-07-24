@@ -210,7 +210,6 @@
   }
 
   /* Disable the specular light reflection pseudo-element on mobile */
-  .discord-loading-glow::before,
   .glass-reflection::before {
     display: none !important;
   }

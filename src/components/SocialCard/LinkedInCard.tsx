@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/SocialCard/LinkedInCard.tsx
+// Description: LinkedIn social card with profile metrics and headline.
+
 import React from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
@@ -10,10 +13,14 @@ import { useCardState } from "@/lib/useCardState";
 
 export const LinkedInCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "linkedin")!;
+// Core module export or function definition that implements this feature.
   const cardState = useCardState();
 
+// Core module export or function definition that implements this feature.
   const headline = cardState.linkedinHeadline || profile.details?.headline;
+// Core module export or function definition that implements this feature.
   const bio = cardState.linkedinHeadlineBio || profile.bio;
+// Core module export or function definition that implements this feature.
   const stats = [
     { label: "Connections", value: cardState.linkedinConnections || profile.stats[0].value },
     { label: "Followers", value: cardState.linkedinFollowers || profile.stats[1].value },

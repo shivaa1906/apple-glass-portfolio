@@ -1,5 +1,8 @@
 "use client";
 
+// File: components/Hero/HeroCard.tsx
+// Description: Hero section component with profile content and motion effects.
+
 import { type CSSProperties, type FC, type MouseEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -16,13 +19,16 @@ import {
 import { ResumeModal } from "./ResumeModal";
 import { useCardState } from "@/lib/useCardState";
 
+// Type definition used to describe the structure of data in this component.
 type CustomCSSProperties = CSSProperties & {
   "--mouse-x"?: string;
   "--mouse-y"?: string;
 };
 
 export const HeroCard: FC = () => {
+// Core module export or function definition that implements this feature.
   const containerRef = useRef<HTMLDivElement | null>(null);
+// Core module export or function definition that implements this feature.
   const [isResumeOpen, setIsResumeOpen] = useState(false);
   const getIsMobile = () =>
     typeof window !== "undefined" &&
@@ -34,9 +40,13 @@ export const HeroCard: FC = () => {
     typeof window !== "undefined" ? getIsMobile() : false
   );
 
+// Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);
+// Core module export or function definition that implements this feature.
   const [rotateY, setRotateY] = useState(0);
+// Core module export or function definition that implements this feature.
   const [mouseX, setMouseX] = useState("50%");
+// Core module export or function definition that implements this feature.
   const [mouseY, setMouseY] = useState("50%");
 
   useEffect(() => {
@@ -46,28 +56,42 @@ export const HeroCard: FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+// Core module export or function definition that implements this feature.
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end start"],
   });
 
+// Core module export or function definition that implements this feature.
   const opacityValue = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
+// Core module export or function definition that implements this feature.
   const scaleValue = useTransform(scrollYProgress, [0, 0.75], [1, 0.88]);
+// Core module export or function definition that implements this feature.
   const yValue = useTransform(scrollYProgress, [0, 0.75], [0, -120]);
 
+// Core module export or function definition that implements this feature.
   const opacity = isMobile ? 1 : opacityValue;
+// Core module export or function definition that implements this feature.
   const scale = isMobile ? 1 : scaleValue;
+// Core module export or function definition that implements this feature.
   const y = isMobile ? 0 : yValue;
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (isMobile || !containerRef.current) return;
+// Core module export or function definition that implements this feature.
     const rect = containerRef.current.getBoundingClientRect();
+// Core module export or function definition that implements this feature.
     const x = e.clientX - rect.left;
+// Core module export or function definition that implements this feature.
     const y = e.clientY - rect.top;
+// Core module export or function definition that implements this feature.
     const centerX = rect.width / 2;
+// Core module export or function definition that implements this feature.
     const centerY = rect.height / 2;
 
+// Core module export or function definition that implements this feature.
     const rX = ((y - centerY) / centerY) * -6;
+// Core module export or function definition that implements this feature.
     const rY = ((x - centerX) / centerX) * 6;
 
     setRotateX(rX);
@@ -76,12 +100,14 @@ export const HeroCard: FC = () => {
     setMouseY(`${y}px`);
   };
 
+// Core module export or function definition that implements this feature.
   const hoverStyle: CustomCSSProperties = {
     transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
     "--mouse-x": mouseX,
     "--mouse-y": mouseY,
   };
 
+// Core module export or function definition that implements this feature.
   const cardState = useCardState();
 
   const handleMouseLeave = () => {
@@ -89,8 +115,11 @@ export const HeroCard: FC = () => {
     setRotateY(0);
   };
 
+// Core module export or function definition that implements this feature.
   const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
+// Core module export or function definition that implements this feature.
   const locationLabel = cardState.heroLocation || HERO_DATA.location;
+// Core module export or function definition that implements this feature.
   const emailLabel = cardState.heroEmail || HERO_DATA.email;
 
   const renderCardContent = () => (
@@ -174,6 +203,7 @@ export const HeroCard: FC = () => {
           { icon: DiscordIcon, href: "#discord", label: "Discord", color: "hover:text-indigo-400" },
           { icon: TwitterIcon, href: "#twitter", label: "Twitter", color: "hover:text-cyan-400" },
         ].map((item, idx) => {
+// Core module export or function definition that implements this feature.
           const IconComponent = item.icon;
           return (
             <a
@@ -219,7 +249,12 @@ export const HeroCard: FC = () => {
             }}
             className="w-full max-w-4xl z-10"
           >
-            <div className="glass-panel glass-reflection rounded-[40px] p-8 sm:p-12 border border-white/15 shadow-2xl shadow-black/80 text-center relative overflow-hidden">
+            <div
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              style={hoverStyle}
+              className="glass-panel glass-reflection rounded-[40px] p-8 sm:p-12 border border-white/15 shadow-2xl shadow-black/80 text-center relative overflow-hidden transition-transform duration-300 ease-out"
+            >
               {renderCardContent()}
             </div>
           </motion.div>
