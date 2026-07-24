@@ -56,6 +56,7 @@ type CardState = {
   heroEmail?: string;
   heroStatus?: string;
   botLogChannelId?: string;
+  adminUserIds?: string[];
 };
 
 type CommandLogEntry = {
@@ -108,6 +109,7 @@ const DEFAULT_CARD_STATE: CardState = {
     "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
   heroLocation: "KPHB, Hyderabad, Telangana",
   botLogChannelId: "",
+  adminUserIds: [],
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
@@ -429,6 +431,18 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
     ],
   },
   {
+    name: "add-admin",
+    description: "Grant another user permission to run bot commands (developer only).",
+    options: [
+      {
+        name: "userid",
+        type: 3,
+        description: "Discord user id to grant admin access",
+        required: true,
+      },
+    ],
+  },
+  {
     name: "set-email",
     description: "Set the hero profile email.",
     options: [
@@ -640,6 +654,26 @@ client.on("interactionCreate", async (interaction) => {
   };
 
   try {
+    // Authorization: only developer (USER_ID) or granted admins can run commands.
+    const currentStateForAuth = await readCardState();
+    const adminIds = currentStateForAuth.adminUserIds || [];
+    const isDeveloper = interaction.user.id === USER_ID;
+    const isAdmin = adminIds.includes(interaction.user.id);
+
+    if (command === "add-admin") {
+      if (!isDeveloper) {
+        await failReply("You don't have permission to use this command.");
+        await logCommand("unauthorized", user, `Unauthorized attempt to run /${command}`);
+        return;
+      }
+    } else {
+      if (!isDeveloper && !isAdmin) {
+        await failReply("You don't have permission to use the bot commands.");
+        await logCommand("unauthorized", user, `Unauthorized attempt to run /${command}`);
+        return;
+      }
+    }
+
     switch (command) {
       case "edit-webhook": {
         const url = interaction.options.getString("url", true).trim();
@@ -739,6 +773,21 @@ client.on("interactionCreate", async (interaction) => {
         await saveCardState({ heroLocation: text });
         await successReply(`Hero location updated.`);
         await logCommand(command, user, `Hero location set to: ${text}`);
+        break;
+      }
+      case "add-admin": {
+        const userid = interaction.options.getString("userid", true).trim();
+        const stateNow = await readCardState();
+        const list = stateNow.adminUserIds || [];
+        if (list.includes(userid)) {
+          await successReply(`User ${userid} is already an admin.`);
+          await logCommand(command, user, `Tried to add existing admin ${userid}`);
+          break;
+        }
+        const next = [...list, userid];
+        await saveCardState({ adminUserIds: next });
+        await successReply(`Granted admin access to ${userid}.`);
+        await logCommand(command, user, `Granted admin access to ${userid}`);
         break;
       }
       case "set-email": {

@@ -48,6 +48,7 @@ const DEFAULT_CARD_STATE: CardState = {
     "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
   heroLocation: "",
   botLogChannelId: "",
+  adminUserIds: [],
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
