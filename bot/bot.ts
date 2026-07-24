@@ -1134,7 +1134,7 @@ client.login(BOT_TOKEN).catch((error) => {
 });
 
 const port = Number(process.env.PORT) || 3000;
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   // Basic health
   if (req.url === "/healthz" || req.url === "/") {
     res.writeHead(200, { "Content-Type": "application/json" });

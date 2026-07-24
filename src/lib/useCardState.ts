@@ -25,6 +25,7 @@ export type CardState = {
   heroEmail?: string;
   heroStatus?: string;
   botLogChannelId?: string;
+  adminUserIds?: string[];
 };
 
 // Core module export or function definition that implements this feature.
