@@ -3,6 +3,7 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 // Type definition used to describe the structure of data in this component.
@@ -26,10 +27,15 @@ type CardState = {
   heroEmail?: string;
   heroStatus?: string;
   botLogChannelId?: string;
+  adminUserIds?: string[];
+  viewerCounterEnabled?: boolean;
 };
 
 // Core module export or function definition that implements this feature.
 const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 // Core module export or function definition that implements this feature.
 const DEFAULT_STATE: CardState = {
@@ -51,11 +57,24 @@ const DEFAULT_STATE: CardState = {
   heroLocation: "",
   botLogChannelId: "",
   adminUserIds: [],
+  viewerCounterEnabled: true,
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
 
 const readState = async (): Promise<CardState> => {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from("portfolio_card_state").select("value").eq("id", "main").maybeSingle();
+      if (!error && data?.value) {
+        const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+        return { ...DEFAULT_STATE, ...parsed };
+      }
+    } catch {
+      // fall back to file storage
+    }
+  }
+
   try {
 // Core module export or function definition that implements this feature.
     const raw = await fs.readFile(STATE_PATH, "utf8");
@@ -76,6 +95,15 @@ const readState = async (): Promise<CardState> => {
 };
 
 const writeState = async (state: CardState) => {
+  if (supabase) {
+    try {
+      await supabase.from("portfolio_card_state").upsert({ id: "main", value: state });
+      return;
+    } catch {
+      // fall back to file storage
+    }
+  }
+
   await fs.writeFile(STATE_PATH, JSON.stringify(state, null, 2), "utf8");
 };
 

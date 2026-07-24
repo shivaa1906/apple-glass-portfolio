@@ -8,6 +8,7 @@ import { CardContainer } from "../SocialCard/CardContainer";
 import { HERO_DATA } from "@/data/socialData";
 import { Send, ArrowUp, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { ViewerCounter } from "@/components/ViewerCounter/ViewerCounter";
 
 export const FooterCard: FC = () => {
 // Core module export or function definition that implements this feature.
@@ -188,7 +189,7 @@ export const FooterCard: FC = () => {
             <span>© 2026 {HERO_DATA.name}. Built with Next.js 15 & Glassmorphism</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center sm:items-end gap-2">
             <button
               onClick={scrollToTop}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white font-medium transition-all hover:scale-105 cursor-pointer"
@@ -196,6 +197,7 @@ export const FooterCard: FC = () => {
               <ArrowUp size={14} className="text-blue-400" />
               <span>Back to Top</span>
             </button>
+            <ViewerCounter />
           </div>
         </div>
       </div>

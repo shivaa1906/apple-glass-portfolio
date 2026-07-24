@@ -1,38 +1,48 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { connectAnalyticsSSE } from "@/lib/analyticsClient";
+import { useCardState } from "@/lib/useCardState";
 
 export const ViewerCounter = () => {
   const [count, setCount] = useState<number>(0);
+  const cardState = useCardState();
 
   useEffect(() => {
-    // fetch initial
     const fetchInitial = async () => {
       try {
-        const base = (process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT || "").replace(/\/+$/,'');
-        const url = base ? `${base}/analytics` : `/analytics`;
+        const base = (process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT || "").replace(/\/+$/, "");
+        const url = base ? `${base}/analytics` : "/analytics";
         const res = await fetch(url);
         if (res.ok) {
           const j = await res.json();
           setCount(j.totalVisitors || j.visitors || 0);
         }
-      } catch (e) {}
+      } catch {
+        // ignore fetch failures
+      }
     };
+
     void fetchInitial();
 
-    const off = connectAnalyticsSSE((ev:any)=>{
-      if (ev.type === 'new-visitor') {
-        setCount((c)=>c+1);
+    const off = connectAnalyticsSSE((ev: any) => {
+      if (ev?.type === "new-visitor") {
+        setCount((current) => current + 1);
       }
     });
+
     return () => off();
   }, []);
 
+  if (cardState.viewerCounterEnabled === false) {
+    return null;
+  }
+
   return (
-    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/6 border border-white/10 shadow-lg">
-      <span className="text-2xl">👁</span>
-      <span className="font-extrabold text-xl tracking-tight">{count.toLocaleString()}</span>
+    <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/10 border border-white/10 shadow-lg backdrop-blur-md">
+      <Eye size={16} className="text-cyan-400" />
+      <span className="font-semibold text-sm tracking-tight">{count.toLocaleString()}</span>
     </div>
   );
 };

@@ -26,6 +26,7 @@ export type CardState = {
   heroStatus?: string;
   botLogChannelId?: string;
   adminUserIds?: string[];
+  viewerCounterEnabled?: boolean;
 };
 
 // Core module export or function definition that implements this feature.
@@ -50,13 +51,26 @@ const DEFAULT_CARD_STATE: CardState = {
   heroLocation: "",
   botLogChannelId: "",
   adminUserIds: [],
+  viewerCounterEnabled: true,
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
 
+const readPersistedCardState = (): CardState => {
+  if (typeof window === "undefined") return DEFAULT_CARD_STATE;
+  try {
+    const raw = window.sessionStorage.getItem("portfolio-card-state");
+    if (!raw) return DEFAULT_CARD_STATE;
+    const parsed = JSON.parse(raw) as CardState;
+    return { ...DEFAULT_CARD_STATE, ...parsed };
+  } catch {
+    return DEFAULT_CARD_STATE;
+  }
+};
+
 export const useCardState = () => {
 // Core module export or function definition that implements this feature.
-  const [cardState, setCardState] = useState<CardState>(DEFAULT_CARD_STATE);
+  const [cardState, setCardState] = useState<CardState>(() => readPersistedCardState());
 
   useEffect(() => {
     let mounted = true;
@@ -75,10 +89,18 @@ export const useCardState = () => {
         const data = (await response.json()) as CardState;
         if (!mounted) return;
 
-        setCardState((current) => ({
-          ...current,
-          ...data,
-        }));
+        setCardState((current) => {
+          const next = {
+            ...current,
+            ...data,
+          };
+          try {
+            window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(next));
+          } catch {
+            // ignore storage errors
+          }
+          return next;
+        });
       } catch {
         // ignore fetch errors
       }
@@ -90,6 +112,15 @@ export const useCardState = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(cardState));
+    } catch {
+      // ignore storage errors
+    }
+  }, [cardState]);
 
   return cardState;
 };

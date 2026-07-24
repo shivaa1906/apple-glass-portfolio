@@ -57,6 +57,7 @@ type CardState = {
   heroStatus?: string;
   botLogChannelId?: string;
   adminUserIds?: string[];
+  viewerCounterEnabled?: boolean;
 };
 
 type CommandLogEntry = {
@@ -1062,7 +1063,7 @@ client.on("interactionCreate", async (interaction) => {
         const stateValue = interaction.options.getString("state", true);
         const enabled = stateValue === "on";
         await saveCardState({ discordSyncEnabled: true, /* keep other flags */ });
-        await saveCardState({ botLogsEnabled: enabled });
+        await saveCardState({ viewerCounterEnabled: enabled });
         await successReply(`${enabled ? "✅ Visitor Counter Enabled" : "❌ Visitor Counter Disabled"}`);
         await logCommand(command, user, `Visitor counter ${enabled ? "enabled" : "disabled"}`);
         break;
