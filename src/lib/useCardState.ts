@@ -24,6 +24,7 @@ export type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  botLogChannelId?: string;
 };
 
 // Core module export or function definition that implements this feature.
@@ -46,6 +47,7 @@ const DEFAULT_CARD_STATE: CardState = {
   linkedinHeadlineBio:
     "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
   heroLocation: "",
+  botLogChannelId: "",
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };

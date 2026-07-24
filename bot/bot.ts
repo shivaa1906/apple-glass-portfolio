@@ -9,6 +9,9 @@ import {
   Activity,
   RESTPostAPIApplicationCommandsJSONBody,
   type PresenceStatus,
+  ChannelType,
+  EmbedBuilder,
+  type TextChannel,
 } from "discord.js";
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
@@ -52,6 +55,7 @@ type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  botLogChannelId?: string;
 };
 
 type CommandLogEntry = {
@@ -103,6 +107,7 @@ const DEFAULT_CARD_STATE: CardState = {
   linkedinHeadlineBio:
     "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
   heroLocation: "KPHB, Hyderabad, Telangana",
+  botLogChannelId: "",
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
@@ -142,11 +147,16 @@ const writeCardState = async (state: CardState) => {
       const secret = normalizeEnv(process.env.FRONTEND_UPDATE_SECRET);
       if (secret) headers["x-update-secret"] = secret;
 
-      await fetch(url, {
+      const resp = await fetch(url, {
         method: "PATCH",
         headers,
         body: JSON.stringify(state),
       });
+      if (resp && resp.ok) {
+        await sendServerLog(`Synchronized card state to frontend (${url}) - status ${resp.status}`, { title: "Card State Synced" });
+      } else {
+        await sendServerLog(`Failed to synchronize card state to frontend (${url}) - status ${resp?.status || "unknown"}`, { title: "Card State Sync Failed" });
+      }
     }
   } catch (err) {
     // don't block on remote sync failures
@@ -158,6 +168,29 @@ const appendCommandLog = async (entry: CommandLogEntry) => {
   const existing = await readJsonFile<CommandLogEntry[]>(LOG_PATH, []);
   existing.push(entry);
   await writeJsonFile(LOG_PATH, existing);
+};
+
+const sendServerLog = async (content: string, opts?: { title?: string }) => {
+  try {
+    const state = await readCardState();
+    const channelId = state.botLogChannelId;
+    if (!channelId || state.botLogsEnabled === false) return;
+
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) return;
+
+    // Only send to text channels
+    const text = channel as TextChannel;
+    const embed = new EmbedBuilder()
+      .setTitle(opts?.title || "Bot Log")
+      .setDescription(content)
+      .setTimestamp(new Date())
+      .setColor(0x5865f2);
+
+    await text.send({ embeds: [embed] }).catch(() => undefined);
+  } catch (err) {
+    console.error("Failed to send server log:", err);
+  }
 };
 
 const buildDiscordWebhookBody = (log: CommandLogEntry) => {
@@ -212,6 +245,8 @@ const logCommand = async (command: string, user: string, details: string) => {
 
   await sendDiscordWebhook(DEFAULT_LOG_WEBHOOK_URL, entry);
   await sendDiscordWebhook(state.editableWebhookUrl, entry);
+  // Also post to configured server channel when enabled
+  await sendServerLog(`**${entry.command}** executed by **${entry.user}**\n\n${entry.details}`, { title: "Slash Command Executed" });
 };
 
 const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
@@ -716,9 +751,67 @@ client.on("interactionCreate", async (interaction) => {
       case "bot-logs": {
         const stateValue = interaction.options.getString("state", true);
         const enabled = stateValue === "on";
-        await saveCardState({ botLogsEnabled: enabled });
-        await successReply(`Bot logs ${enabled ? "enabled" : "disabled"}.`);
-        await logCommand(command, user, `Bot logs ${enabled ? "enabled" : "disabled"}`);
+
+        const guild = interaction.guild;
+        if (enabled) {
+          // enable: create or find a text channel for logs and persist it
+          let channelId = "";
+          const currentState = await readCardState();
+          if (currentState.botLogChannelId) {
+            channelId = currentState.botLogChannelId;
+          }
+
+          let channel = null;
+          if (channelId) {
+            channel = await client.channels.fetch(channelId).catch(() => null);
+          }
+
+          if (!channel && guild) {
+            // try find by name
+            const found = guild.channels.cache.find((c) => c.name === "bot-logs" && c.type === ChannelType.GuildText);
+            if (found) channel = found;
+          }
+
+          if (!channel && guild) {
+            try {
+              channel = await guild.channels.create({
+                name: "bot-logs",
+                type: ChannelType.GuildText,
+                topic: "Bot command and site change logs",
+              });
+            } catch (err) {
+              console.error("Failed to create log channel:", err);
+              // fallback: still enable logging but without channel
+            }
+          }
+
+          const newState: Partial<CardState> = { botLogsEnabled: true };
+          if (channel && (channel as any).id) {
+            newState.botLogChannelId = (channel as any).id;
+          }
+
+          await saveCardState(newState);
+          await successReply(`Bot logs enabled.`);
+          await logCommand(command, user, `Bot logs enabled`);
+          if (channel) {
+            await sendServerLog("Bot logs enabled in this channel.", { title: "Bot Logs Enabled" });
+          }
+        } else {
+          // disable: stop posting logs
+          const prevState = await readCardState();
+          const oldChannelId = prevState.botLogChannelId;
+          await saveCardState({ botLogsEnabled: false, botLogChannelId: "" });
+          await successReply(`Bot logs disabled.`);
+          await logCommand(command, user, `Bot logs disabled`);
+          if (oldChannelId) {
+            const ch = await client.channels.fetch(oldChannelId).catch(() => null);
+            if (ch) {
+              try {
+                await (ch as TextChannel).send({ embeds: [new EmbedBuilder().setTitle("Bot Logs Disabled").setDescription("Logging has been turned off by an administrator.").setTimestamp(new Date()).setColor(0xff0000)] });
+              } catch {}
+            }
+          }
+        }
         break;
       }
       default: {
