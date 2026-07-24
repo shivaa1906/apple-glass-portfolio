@@ -812,6 +812,10 @@ client.on("interactionCreate", async (interaction) => {
 
   const sendReply = async (body: any) => {
     const payload = normalizeReply(body, true);
+    // Ensure payload is not empty (Discord rejects empty messages).
+    if (!payload.content && !payload.embeds && !payload.components) {
+      payload.content = "\u200b"; // zero-width space
+    }
     try {
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp(payload as any);
