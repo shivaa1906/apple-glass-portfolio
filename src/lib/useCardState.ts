@@ -45,7 +45,7 @@ const DEFAULT_CARD_STATE: CardState = {
   linkedinHeadline: "Frontend Developer | React & Next.js Developer | Spatial Computing Enthusiast",
   linkedinHeadlineBio:
     "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
-  heroLocation: "KPHB, Hyderabad, Telangana",
+  heroLocation: "",
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
