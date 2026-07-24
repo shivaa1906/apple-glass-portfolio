@@ -70,35 +70,33 @@ const readPersistedCardState = (): CardState => {
 
 export const useCardState = () => {
 // Core module export or function definition that implements this feature.
-  const [cardState, setCardState] = useState<CardState>(() => readPersistedCardState());
+  const [cardState, setCardState] = useState<CardState>(() => DEFAULT_CARD_STATE);
 
   useEffect(() => {
     let mounted = true;
 
     const loadState = async () => {
+      // apply any persisted client state immediately to avoid bouncing after mount
       try {
-// Core module export or function definition that implements this feature.
+        const raw = window.sessionStorage.getItem("portfolio-card-state");
+        if (raw) {
+          const parsed = JSON.parse(raw) as CardState;
+          setCardState((c) => ({ ...c, ...parsed }));
+        }
+      } catch {}
+
+      try {
         const response = await fetch("/api/card-state", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
-        if (!response.ok) {
-          return;
-        }
-
-// Core module export or function definition that implements this feature.
+        if (!response.ok) return;
         const data = (await response.json()) as CardState;
         if (!mounted) return;
-
         setCardState((current) => {
-          const next = {
-            ...current,
-            ...data,
-          };
+          const next = { ...current, ...data };
           try {
             window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(next));
-          } catch {
-            // ignore storage errors
-          }
+          } catch {}
           return next;
         });
       } catch {
