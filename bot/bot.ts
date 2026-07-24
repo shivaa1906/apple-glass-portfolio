@@ -1235,6 +1235,22 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ error: "Not found" }));
 });
 
-server.listen(port, () => {
-  console.log(`Bot HTTP health server listening on port ${port}`);
-});
+const tryListen = (startPort: number, attempts = 5) => {
+  const p = startPort;
+  server.once("error", (err: any) => {
+    if (err && err.code === "EADDRINUSE" && attempts > 0) {
+      console.warn(`Port ${p} in use, trying ${p + 1}...`);
+      // try next port
+      tryListen(p + 1, attempts - 1);
+    } else {
+      console.error("Server failed to start:", err);
+      process.exit(1);
+    }
+  });
+  server.once("listening", () => {
+    console.log(`Bot HTTP health server listening on port ${p}`);
+  });
+  server.listen(p);
+};
+
+tryListen(port, 5);
