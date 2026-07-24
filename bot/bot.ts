@@ -804,20 +804,27 @@ client.on("interactionCreate", async (interaction) => {
   const command = interaction.commandName;
   const user = `${interaction.user.username}#${interaction.user.discriminator}`;
 
-  const failReply = async (message: string) => {
+  const normalizeReply = (body: any, ephemeral = true) => {
+    if (typeof body === "string") return { content: body, ephemeral };
+    // if it's already an options object, merge ephemeral if not set
+    return { ...(body || {}), ephemeral: (body && typeof body.ephemeral === "boolean") ? body.ephemeral : ephemeral };
+  };
+
+  const sendReply = async (body: any) => {
+    const payload = normalizeReply(body, true);
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: message, ephemeral: true });
+      await interaction.followUp(payload as any);
     } else {
-      await interaction.reply({ content: message, ephemeral: true });
+      await interaction.reply(payload as any);
     }
   };
 
-  const successReply = async (message: string) => {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: message, ephemeral: true });
-    } else {
-      await interaction.reply({ content: message, ephemeral: true });
-    }
+  const failReply = async (message: any) => {
+    await sendReply(message);
+  };
+
+  const successReply = async (message: any) => {
+    await sendReply(message);
   };
 
   try {
