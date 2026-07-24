@@ -131,6 +131,27 @@ const readCardState = async (): Promise<CardState> => {
 
 const writeCardState = async (state: CardState) => {
   await writeJsonFile(STATE_PATH, state);
+
+  // If a frontend URL is provided, attempt to PATCH the remote card-state
+  // so a separately deployed frontend can reflect bot-driven updates.
+  try {
+    const frontend = normalizeEnv(process.env.FRONTEND_URL);
+    if (frontend) {
+      const url = `${frontend.replace(/\/+$/,'')}/api/card-state`;
+      const headers: Record<string,string> = { "Content-Type": "application/json" };
+      const secret = normalizeEnv(process.env.FRONTEND_UPDATE_SECRET);
+      if (secret) headers["x-update-secret"] = secret;
+
+      await fetch(url, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(state),
+      });
+    }
+  } catch (err) {
+    // don't block on remote sync failures
+    console.error("Failed to sync card state to frontend:", err);
+  }
 };
 
 const appendCommandLog = async (entry: CommandLogEntry) => {

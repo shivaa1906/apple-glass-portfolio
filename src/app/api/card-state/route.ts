@@ -47,7 +47,7 @@ const DEFAULT_STATE: CardState = {
   linkedinRecommendations: "0",
   linkedinHeadline: "Frontend Developer | React & Next.js Developer | Spatial Computing Enthusiast",
   linkedinHeadlineBio: "Passionate about building modern web applications, interactive 3D experiences, and continuously learning React, Next.js, and modern web technologies.",
-  heroLocation: "KPHB, Hyderabad, Telangana",
+  heroLocation: "",
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
 };
@@ -88,6 +88,16 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    // Optional security: if FRONTEND_UPDATE_SECRET is set on the server,
+    // require the same value in the `x-update-secret` header for external
+    // updates (this lets a deployed bot update the frontend safely).
+    const configuredSecret = process.env.FRONTEND_UPDATE_SECRET;
+    if (configuredSecret) {
+      const incoming = request.headers.get("x-update-secret") || "";
+      if (incoming !== configuredSecret) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
 // Core module export or function definition that implements this feature.
     const updates = (await request.json()) as Partial<CardState>;
 // Core module export or function definition that implements this feature.
