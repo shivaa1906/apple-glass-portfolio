@@ -118,7 +118,7 @@ export const HeroCard: FC = () => {
 // Core module export or function definition that implements this feature.
   const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
 // Core module export or function definition that implements this feature.
-  const locationLabel = cardState.heroLocation || HERO_DATA.location;
+  const locationLabel = cardState.heroLocation || "";
 // Core module export or function definition that implements this feature.
   const emailLabel = cardState.heroEmail || HERO_DATA.email;
 
@@ -166,10 +166,12 @@ export const HeroCard: FC = () => {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/80 mb-8">
-        <span className="flex items-center gap-1.5 bg-black/35 px-3 py-1.5 rounded-full border border-white/15">
-          <MapPin size={14} className="text-blue-400" />
-          {locationLabel}
-        </span>
+        {locationLabel ? (
+          <span className="flex items-center gap-1.5 bg-black/35 px-3 py-1.5 rounded-full border border-white/15">
+            <MapPin size={14} className="text-blue-400" />
+            {locationLabel}
+          </span>
+        ) : null}
         <span className="flex items-center gap-1.5 bg-black/35 px-3 py-1.5 rounded-full border border-white/15">
           <Mail size={14} className="text-cyan-400" />
           {emailLabel}
