@@ -3,7 +3,7 @@
 // File: components/Hero/ResumeModal.tsx
 // Description: Resume modal dialog with open/close animation.
 
-import { type FC } from "react";
+import { type FC, useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X, Download, FileText, CheckCircle2, Sparkles } from "lucide-react";
 
@@ -22,9 +22,16 @@ const getIsMobileDevice = () =>
 export const ResumeModal: FC<ResumeModalProps> = ({ isOpen, onClose }) => {
 // Core module export or function definition that implements this feature.
   const shouldReduceMotion = useReducedMotion();
-// Core module export or function definition that implements this feature.
-  const isMobileDevice = typeof window !== "undefined" ? getIsMobileDevice() : false;
-// Core module export or function definition that implements this feature.
+
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    setIsMobileDevice(getIsMobileDevice());
+    const handleResize = () => setIsMobileDevice(getIsMobileDevice());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const disableMotion = shouldReduceMotion || isMobileDevice;
 
   const renderModalContent = () => (

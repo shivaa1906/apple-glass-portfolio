@@ -9,6 +9,7 @@ import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { ThumbsUp, Share2, ExternalLink, Globe } from "lucide-react";
 import { FacebookIcon } from "@/components/Icons/SocialBrandIcons";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 import { useCardState } from "@/lib/useCardState";
 
 // Type definition used to describe the structure of data in this component.
@@ -22,7 +23,20 @@ type FacebookProfileResponse = {
   fan_count?: number;
 };
 
+type FacebookPost = {
+  id: string;
+  message?: string;
+  created_time?: string;
+  permalink_url?: string;
+  shares?: { count?: number };
+};
+
 const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(value);
+
+const resolveStatValue = (value: string | null | undefined) => {
+  const normalized = value?.trim();
+  return normalized ? normalized : "0";
+};
 
 const ensureHandle = (username: string) => {
   if (!username.trim()) return "";
@@ -33,18 +47,13 @@ export const FacebookCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "facebook")!;
 // Core module export or function definition that implements this feature.
   const [facebookProfile, setFacebookProfile] = useState<FacebookProfileResponse | null>(null);
-// Core module export or function definition that implements this feature.
-  const [displayFollowers, setDisplayFollowers] = useState(profile.stats[0].value);
-// Core module export or function definition that implements this feature.
-  const [displayLikes, setDisplayLikes] = useState(profile.stats[1].value);
-// Core module export or function definition that implements this feature.
+  const [facebookPosts, setFacebookPosts] = useState<FacebookPost[] | null>(null);
+  const [displayFollowers, setDisplayFollowers] = useState(() => resolveStatValue(profile.stats[0].value));
+  const [displayFollowing, setDisplayFollowing] = useState(() => resolveStatValue(profile.stats[1].value));
   const followerAnimationRef = useRef<number | null>(null);
-// Core module export or function definition that implements this feature.
-  const likeAnimationRef = useRef<number | null>(null);
-// Core module export or function definition that implements this feature.
+  const followingAnimationRef = useRef<number | null>(null);
   const previousFollowersRef = useRef<number | null>(null);
-// Core module export or function definition that implements this feature.
-  const previousLikesRef = useRef<number | null>(null);
+  const previousFollowingRef = useRef<number | null>(null);
 
 // Core module export or function definition that implements this feature.
   const animateValue = (
@@ -98,19 +107,32 @@ export const FacebookCard: React.FC = () => {
     }
   };
 
+  const fetchFacebookPosts = async () => {
+    try {
+      const resp = await fetch("/api/facebook/posts", { cache: "no-store" });
+      if (!resp.ok) return;
+      const d = await resp.json();
+      setFacebookPosts(Array.isArray(d) ? d : null);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
+    // Poll every 4-6 minutes (randomized) so updates happen regularly but not all at once.
+    const pollMs = 240000 + Math.floor(Math.random() * 120000);
     const intervalId = window.setInterval(() => {
       void fetchFacebookData();
-    }, 300000);
+      void fetchFacebookPosts();
+    }, pollMs);
 
-    window.setTimeout(() => {
-      void fetchFacebookData();
-    }, 0);
+    // initial load
+    void fetchFacebookData();
+    void fetchFacebookPosts();
 
 // Core module export or function definition that implements this feature.
     const followerFrame = followerAnimationRef.current;
-// Core module export or function definition that implements this feature.
-    const likeFrame = likeAnimationRef.current;
+    const likeFrame = followingAnimationRef.current;
 
     return () => {
       window.clearInterval(intervalId);
@@ -120,33 +142,35 @@ export const FacebookCard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (facebookProfile?.followers_count != null) {
-// Core module export or function definition that implements this feature.
-      const target = facebookProfile.followers_count;
-// Core module export or function definition that implements this feature.
-      const previous = previousFollowersRef.current ?? target;
-      if (previous !== target) {
-        animateValue(previous, target, setDisplayFollowers, followerAnimationRef);
-      } else {
-        setDisplayFollowers(formatNumber(target));
-      }
-      previousFollowersRef.current = target;
+    if (facebookProfile?.followers_count == null) {
+      setDisplayFollowers("0");
+      return;
     }
+
+    const target = facebookProfile.followers_count;
+    const previous = previousFollowersRef.current ?? target;
+    if (previous !== target) {
+      animateValue(previous, target, setDisplayFollowers, followerAnimationRef);
+    } else {
+      setDisplayFollowers(formatNumber(target));
+    }
+    previousFollowersRef.current = target;
   }, [facebookProfile?.followers_count]);
 
   useEffect(() => {
-    if (facebookProfile?.fan_count != null) {
-// Core module export or function definition that implements this feature.
-      const target = facebookProfile.fan_count;
-// Core module export or function definition that implements this feature.
-      const previous = previousLikesRef.current ?? target;
-      if (previous !== target) {
-        animateValue(previous, target, setDisplayLikes, likeAnimationRef);
-      } else {
-        setDisplayLikes(formatNumber(target));
-      }
-      previousLikesRef.current = target;
+    if (facebookProfile?.fan_count == null) {
+      setDisplayFollowing("0");
+      return;
     }
+
+    const target = facebookProfile.fan_count;
+    const previous = previousFollowingRef.current ?? target;
+    if (previous !== target) {
+      animateValue(previous, target, setDisplayFollowing, followingAnimationRef);
+    } else {
+      setDisplayFollowing(formatNumber(target));
+    }
+    previousFollowingRef.current = target;
   }, [facebookProfile?.fan_count]);
 
 // Core module export or function definition that implements this feature.
@@ -160,20 +184,25 @@ export const FacebookCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const displayHandle = facebookProfile?.username ? ensureHandle(facebookProfile.username) : profile.handle;
 // Core module export or function definition that implements this feature.
-  const followersValue = facebookProfile?.followers_count != null ? displayFollowers : profile.stats[0].value;
-// Core module export or function definition that implements this feature.
-  const likesValue = facebookProfile?.fan_count != null ? displayLikes : profile.stats[1].value;
-// Core module export or function definition that implements this feature.
-  const communityValue = profile.stats[2].value;
-// Core module export or function definition that implements this feature.
-  const featuredPost = {
-    text:
-      cardState.facebookAnnouncementText || profile.details?.featuredPost?.text || "",
-    date:
-      cardState.facebookAnnouncementDate || profile.details?.featuredPost?.date || "",
-    likes: profile.details?.featuredPost?.likes,
-    shares: profile.details?.featuredPost?.shares,
-  };
+  const followersValue = facebookProfile?.followers_count != null ? displayFollowers : resolveStatValue(profile.stats[0].value);
+  const followingValue = facebookProfile?.fan_count != null ? displayFollowing : resolveStatValue(profile.stats[1].value);
+  const postsCount = Array.isArray(facebookPosts) ? String(facebookPosts.length) : resolveStatValue(profile.stats[2].value);
+
+  // If there are live posts from the API, prefer the latest post as the featured announcement.
+  const latest = Array.isArray(facebookPosts) && facebookPosts.length ? facebookPosts[0] : null;
+  const featuredPost = latest
+    ? {
+        text: latest.message || "",
+        date: latest.created_time || "",
+        likes: "",
+        shares: latest.shares?.count ? String(latest.shares.count) : "",
+      }
+    : {
+        text: cardState.facebookAnnouncementText || profile.details?.featuredPost?.text || "",
+        date: cardState.facebookAnnouncementDate || profile.details?.featuredPost?.date || "",
+        likes: profile.details?.featuredPost?.likes,
+        shares: profile.details?.featuredPost?.shares,
+      };
 // Core module export or function definition that implements this feature.
   const actionUrl = facebookProfile?.link || profile.actionUrl;
 
@@ -211,9 +240,13 @@ export const FacebookCard: React.FC = () => {
             <div className="pt-6 sm:pt-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{displayName}</h3>
-                <span className="p-1.5 rounded-full bg-blue-600/30 text-blue-400 border border-blue-500/40">
-                  <FacebookIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<FacebookIcon size={14} />}
+                  label="Facebook"
+                  bg="rgba(24,119,242,0.12)"
+                  border="rgba(24,119,242,0.24)"
+                  shadow="0 0 18px rgba(24,119,242,0.12)"
+                />
               </div>
               <p className="text-sm font-medium text-blue-400">{displayHandle}</p>
             </div>
@@ -236,12 +269,12 @@ export const FacebookCard: React.FC = () => {
             <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Followers</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-xl sm:text-2xl font-extrabold text-white">{likesValue}</div>
-            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Likes</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white">{followingValue}</div>
+            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Following</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-xl sm:text-2xl font-extrabold text-white">{communityValue}</div>
-            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Community</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white">{postsCount}</div>
+            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Posts</div>
           </div>
         </div>
 
@@ -254,10 +287,6 @@ export const FacebookCard: React.FC = () => {
             {featuredPost?.text}
           </p>
           <div className="flex items-center gap-4 text-xs text-white/60 pt-2 border-t border-white/10">
-            <span className="flex items-center gap-1.5 hover:text-blue-400 cursor-pointer">
-              <ThumbsUp size={14} className="text-blue-400" />
-              {featuredPost?.likes} Likes
-            </span>
             <span className="flex items-center gap-1.5 hover:text-blue-400 cursor-pointer">
               <Share2 size={14} />
               {featuredPost?.shares} Shares

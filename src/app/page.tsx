@@ -1,5 +1,3 @@
-"use client";
-
 // File: app/page.tsx
 // Description: Root page component that assembles all app sections.
 
@@ -9,7 +7,7 @@ import { BackgroundCanvas } from "@/components/Background/BackgroundCanvas";
 import { CursorGlow } from "@/components/CursorGlow/CursorGlow";
 import { FloatingNav } from "@/components/Navigation/FloatingNav";
 
-import { HeroCard } from "@/components/Hero/HeroCard";
+import HeroCardWrapper from "@/components/Hero/HeroCardWrapper";
 import { InstagramCard } from "@/components/SocialCard/InstagramCard";
 import { LinkedInCard } from "@/components/SocialCard/LinkedInCard";
 import { YouTubeCard } from "@/components/SocialCard/YouTubeCard";
@@ -34,7 +32,7 @@ export default function Home() {
 
         {/* Fullscreen Card Sections on Desktop / Sequential Gapped Cards on Mobile */}
         <div className="relative z-10 flex flex-col gap-6 sm:gap-10 md:gap-0">
-          <HeroCard />
+          <HeroCardWrapper />
           <InstagramCard />
           <LinkedInCard />
           <YouTubeCard />

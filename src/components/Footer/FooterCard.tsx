@@ -185,11 +185,12 @@ export const FooterCard: FC = () => {
 
         {/* Footer Navigation Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10 text-xs text-white/60">
-          <div>
+          <div className="flex-1 text-center sm:text-left">
             <span>© 2026 {HERO_DATA.name}. Built with Next.js 15 & Glassmorphism</span>
           </div>
 
-          <div className="flex flex-col items-center sm:items-end gap-2">
+          <div className="flex flex-1 justify-center sm:justify-end items-center gap-2">
+            <ViewerCounter />
             <button
               onClick={scrollToTop}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white font-medium transition-all hover:scale-105 cursor-pointer"
@@ -197,7 +198,6 @@ export const FooterCard: FC = () => {
               <ArrowUp size={14} className="text-blue-400" />
               <span>Back to Top</span>
             </button>
-            <ViewerCounter />
           </div>
         </div>
       </div>

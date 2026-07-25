@@ -9,6 +9,7 @@ import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { Play, Eye, Clock, ExternalLink, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { YouTubeIcon } from "@/components/Icons/SocialBrandIcons";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 
 // Type definition used to describe the structure of data in this component.
 type YouTubeStatsResponse = {
@@ -185,9 +186,13 @@ export const YouTubeCard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{displayName}</h3>
-                <span className="p-1.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30">
-                  <YouTubeIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<YouTubeIcon size={14} />}
+                  label="YouTube"
+                  bg="rgba(255,0,0,0.12)"
+                  border="rgba(255,0,0,0.24)"
+                  shadow="0 0 18px rgba(255,0,0,0.12)"
+                />
               </div>
               <p className="text-sm font-medium text-red-400">{profile.handle}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>

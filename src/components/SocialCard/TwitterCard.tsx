@@ -10,6 +10,7 @@ import { CardContainer } from "./CardContainer";
 import { Heart, Repeat2, MessageCircle, Bookmark, ExternalLink, Pin, Sparkles } from "lucide-react";
 import { TwitterIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 
 export const TwitterCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "twitter")!;
@@ -66,9 +67,13 @@ export const TwitterCard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{profile.name}</h3>
-                <span className="p-1.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                  <TwitterIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<TwitterIcon size={14} />}
+                  label="Twitter"
+                  bg="rgba(56,189,248,0.12)"
+                  border="rgba(56,189,248,0.24)"
+                  shadow="0 0 18px rgba(56,189,248,0.12)"
+                />
               </div>
               <p className="text-sm font-medium text-sky-400">{profile.handle}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>

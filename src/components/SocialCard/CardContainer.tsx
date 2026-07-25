@@ -47,9 +47,7 @@ export const CardContainer: FC<CardContainerProps> = ({
       window.matchMedia("(hover: none)").matches ||
       window.matchMedia("(pointer: coarse)").matches);
 
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? isMobileQuery() : false
-  );
+  const [isMobile, setIsMobile] = useState(false);
 
 // Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);

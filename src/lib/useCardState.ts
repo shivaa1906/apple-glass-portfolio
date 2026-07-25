@@ -52,7 +52,7 @@ const DEFAULT_CARD_STATE: CardState = {
   botLogChannelId: "",
   adminUserIds: [],
   viewerCounterEnabled: true,
-  heroEmail: "shivaa1906@gmail.com",
+  heroEmail: "",
   heroStatus: "Available",
 };
 
@@ -76,15 +76,6 @@ export const useCardState = () => {
     let mounted = true;
 
     const loadState = async () => {
-      // apply any persisted client state immediately to avoid bouncing after mount
-      try {
-        const raw = window.sessionStorage.getItem("portfolio-card-state");
-        if (raw) {
-          const parsed = JSON.parse(raw) as CardState;
-          setCardState((c) => ({ ...c, ...parsed }));
-        }
-      } catch {}
-
       try {
         const response = await fetch("/api/card-state", {
           headers: { "ngrok-skip-browser-warning": "true" },
@@ -92,6 +83,7 @@ export const useCardState = () => {
         if (!response.ok) return;
         const data = (await response.json()) as CardState;
         if (!mounted) return;
+        // apply server-provided data first
         setCardState((current) => {
           const next = { ...current, ...data };
           try {
@@ -99,6 +91,19 @@ export const useCardState = () => {
           } catch {}
           return next;
         });
+
+        // then merge persisted client overrides, but do NOT override server `heroEmail`
+        try {
+          const raw = window.sessionStorage.getItem("portfolio-card-state");
+          if (raw) {
+            const parsed = JSON.parse(raw) as CardState;
+            // prevent stored email from temporarily overriding server state
+            if (parsed && typeof parsed === "object") {
+              delete (parsed as any).heroEmail;
+              setCardState((c) => ({ ...c, ...parsed }));
+            }
+          }
+        } catch {}
       } catch {
         // ignore fetch errors
       }

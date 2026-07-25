@@ -9,6 +9,7 @@ import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { Heart, MessageCircle, ExternalLink, Sparkles } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/SocialBrandIcons";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 
 // Type definition used to describe the structure of data in this component.
 type InstagramProfileResponse = {
@@ -167,9 +168,13 @@ export const InstagramCard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{profile.name}</h3>
-                <span className="p-1.5 rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30">
-                  <InstagramIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<InstagramIcon size={14} />}
+                  label="Instagram"
+                  bg="rgba(225,48,108,0.12)"
+                  border="rgba(225,48,108,0.28)"
+                  shadow="0 0 18px rgba(225,48,108,0.18)"
+                />
               </div>
               <p className="text-sm font-medium text-pink-400/90">{displayHandle}</p>
               <p className="text-xs text-white/70 mt-1 max-w-md">{profile.bio}</p>

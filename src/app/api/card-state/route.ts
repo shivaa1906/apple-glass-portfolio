@@ -58,7 +58,7 @@ const DEFAULT_STATE: CardState = {
   botLogChannelId: "",
   adminUserIds: [],
   viewerCounterEnabled: true,
-  heroEmail: "shivaa1906@gmail.com",
+  heroEmail: "",
   heroStatus: "Available",
 };
 

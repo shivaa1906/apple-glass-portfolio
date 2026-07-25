@@ -25,7 +25,12 @@ type CustomCSSProperties = CSSProperties & {
   "--mouse-y"?: string;
 };
 
-export const HeroCard: FC = () => {
+type HeroCardProps = {
+  initialHeroLocation?: string;
+  initialHeroEmail?: string;
+};
+
+export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEmail }) => {
 // Core module export or function definition that implements this feature.
   const containerRef = useRef<HTMLDivElement | null>(null);
 // Core module export or function definition that implements this feature.
@@ -36,9 +41,7 @@ export const HeroCard: FC = () => {
       window.matchMedia("(hover: none)").matches ||
       window.matchMedia("(pointer: coarse)").matches);
 
-  const [isMobile, setIsMobile] = useState<boolean>(() =>
-    typeof window !== "undefined" ? getIsMobile() : false
-  );
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
 // Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);
@@ -117,10 +120,17 @@ export const HeroCard: FC = () => {
 
 // Core module export or function definition that implements this feature.
   const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
-// Core module export or function definition that implements this feature.
-  const locationLabel = cardState.heroLocation || "";
-// Core module export or function definition that implements this feature.
-  const emailLabel = cardState.heroEmail || HERO_DATA.email;
+  const locationLabel = cardState.heroLocation || initialHeroLocation || "";
+
+  const [emailLabelState, setEmailLabelState] = useState<string>(
+    () => initialHeroEmail || HERO_DATA.email || ""
+  );
+
+  useEffect(() => {
+    if (cardState.heroEmail) setEmailLabelState(cardState.heroEmail);
+  }, [cardState.heroEmail]);
+
+  const emailLabel = emailLabelState;
 
   const renderCardContent = () => (
     <>

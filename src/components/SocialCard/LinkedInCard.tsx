@@ -9,6 +9,7 @@ import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { Briefcase, Award, CheckCircle, ExternalLink } from "lucide-react";
 import { LinkedInIcon } from "@/components/Icons/SocialBrandIcons";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 import { useCardState } from "@/lib/useCardState";
 
 export const LinkedInCard: React.FC = () => {
@@ -46,9 +47,13 @@ export const LinkedInCard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{profile.name}</h3>
-                <span className="p-1.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  <LinkedInIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<LinkedInIcon size={14} />}
+                  label="LinkedIn"
+                  bg="rgba(10,102,194,0.12)"
+                  border="rgba(10,102,194,0.28)"
+                  shadow="0 0 18px rgba(10,102,194,0.18)"
+                />
               </div>
               <p className="text-sm font-medium text-blue-400">{headline}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{bio}</p>

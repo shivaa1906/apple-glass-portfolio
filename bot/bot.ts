@@ -433,6 +433,42 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
     ],
   },
   {
+    name: "set-twitter-followers",
+    description: "Set the Twitter followers count (alias).",
+    options: [
+      {
+        name: "count",
+        type: 3,
+        description: "New followers count.",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "set-twitter-following",
+    description: "Set the Twitter following count (alias).",
+    options: [
+      {
+        name: "count",
+        type: 3,
+        description: "New following count.",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "set-twitter-tweets",
+    description: "Set the Twitter tweets count (alias).",
+    options: [
+      {
+        name: "count",
+        type: 3,
+        description: "New tweets count.",
+        required: true,
+      },
+    ],
+  },
+  {
     name: "set-current-activity",
     description: "Update the Discord activity text.",
     options: [
@@ -885,6 +921,13 @@ client.on("interactionCreate", async (interaction) => {
         await logCommand(command, user, `Twitter followers set to ${count}`);
         break;
       }
+      case "set-twitter-followers": {
+        const count = interaction.options.getString("count", true).trim();
+        await saveCardState({ twitterFollowers: count });
+        await successReply(`Twitter followers count updated to ${count}.`);
+        await logCommand(command, user, `Twitter followers set to ${count}`);
+        break;
+      }
       case "xfollowing-set": {
         const count = interaction.options.getString("count", true).trim();
         await saveCardState({ twitterFollowing: count });
@@ -892,7 +935,21 @@ client.on("interactionCreate", async (interaction) => {
         await logCommand(command, user, `Twitter following set to ${count}`);
         break;
       }
+      case "set-twitter-following": {
+        const count = interaction.options.getString("count", true).trim();
+        await saveCardState({ twitterFollowing: count });
+        await successReply(`Twitter following count updated to ${count}.`);
+        await logCommand(command, user, `Twitter following set to ${count}`);
+        break;
+      }
       case "xtweets-set": {
+        const count = interaction.options.getString("count", true).trim();
+        await saveCardState({ twitterTweets: count });
+        await successReply(`Twitter tweets count updated to ${count}.`);
+        await logCommand(command, user, `Twitter tweets set to ${count}`);
+        break;
+      }
+      case "set-twitter-tweets": {
         const count = interaction.options.getString("count", true).trim();
         await saveCardState({ twitterTweets: count });
         await successReply(`Twitter tweets count updated to ${count}.`);

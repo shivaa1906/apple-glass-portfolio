@@ -40,9 +40,9 @@ export const ViewerCounter = () => {
   }
 
   return (
-    <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/10 border border-white/10 shadow-lg backdrop-blur-md">
+    <div className="inline-flex items-center gap-2 text-white/80 text-sm">
       <Eye size={16} className="text-cyan-400" />
-      <span className="font-semibold text-sm tracking-tight">{count.toLocaleString()}</span>
+      <span className="font-semibold tracking-tight">{count.toLocaleString()}</span>
     </div>
   );
 };

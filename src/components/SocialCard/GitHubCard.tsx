@@ -9,6 +9,7 @@ import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { Star, GitFork, Code2, ExternalLink, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { GitHubIcon } from "@/components/Icons/SocialBrandIcons";
+import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 
 // Type definition used to describe the structure of data in this component.
 type ContributionLevel = "NONE" | "FIRST_QUARTILE" | "SECOND_QUARTILE" | "THIRD_QUARTILE" | "FOURTH_QUARTILE";
@@ -372,9 +373,14 @@ export const GitHubCard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">{profile.name}</h3>
-                <span className="p-1.5 rounded-full bg-white/10 text-white border border-white/20">
-                  <GitHubIcon size={16} />
-                </span>
+                <PlatformBadge
+                  icon={<GitHubIcon size={14} />}
+                  label="GitHub"
+                  bg="rgba(255,255,255,0.06)"
+                  border="rgba(255,255,255,0.12)"
+                  shadow="0 0 12px rgba(255,255,255,0.06)"
+                  textColor="#fff"
+                />
               </div>
               <p className="text-sm font-medium text-gray-300">{profile.handle}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>

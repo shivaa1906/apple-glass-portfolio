@@ -208,6 +208,9 @@ export const DiscordCard: FC = () => {
                 </span>
               </div>
               <p className="text-sm font-medium text-indigo-300">@{presence.username}</p>
+              {customStatus ? (
+                <p className="text-xs text-white/70 mt-1">{customStatus}</p>
+              ) : null}
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>
             </div>
           </div>
@@ -223,18 +226,12 @@ export const DiscordCard: FC = () => {
           </a>
         </div>
 
-        <div className="bg-indigo-950/80 sm:bg-indigo-950/40 p-4 rounded-2xl border border-indigo-500/40 sm:border-indigo-500/30 space-y-2">
-          <div className="flex items-center justify-between text-xs text-indigo-200 sm:text-indigo-300 font-bold uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Terminal size={14} className="text-emerald-400" />
-              Current Activity
-            </span>
+        <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/10 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-indigo-200 font-semibold uppercase tracking-wide">
+            <Terminal size={14} className="text-emerald-300" />
+            Current Activity
           </div>
-          <p className="text-sm text-white font-semibold flex items-center gap-2">
-            <Sparkles size={16} className="text-indigo-300" />
-            {customStatus}
-          </p>
-          <p className="text-xs text-white/80 sm:text-white/60 mt-2">
+          <p className="text-sm sm:text-base text-white font-extrabold leading-tight break-words whitespace-pre-wrap">
             {activityText}
           </p>
         </div>
