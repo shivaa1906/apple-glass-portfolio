@@ -15,7 +15,7 @@ export async function GET() {
   }
 
 // Core module export or function definition that implements this feature.
-  const details = profile.details ?? {};
+  const details = (profile.details ?? {}) as Record<string, any>;
 // Core module export or function definition that implements this feature.
   const cover = typeof details.cover === "string" && details.cover.trim() ? details.cover : "/assets/profile_avatar1.jpg";
 // Core module export or function definition that implements this feature.

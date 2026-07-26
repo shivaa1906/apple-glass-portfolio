@@ -47,7 +47,7 @@ export const CardContainer: FC<CardContainerProps> = ({
       window.matchMedia("(hover: none)").matches ||
       window.matchMedia("(pointer: coarse)").matches);
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => isMobileQuery());
 
 // Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);
@@ -59,7 +59,6 @@ export const CardContainer: FC<CardContainerProps> = ({
   const [mouseY, setMouseY] = useState("50%");
 
   useEffect(() => {
-    setIsMobile(isMobileQuery());
     const handleResize = () => setIsMobile(isMobileQuery());
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);

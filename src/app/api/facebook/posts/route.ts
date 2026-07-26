@@ -52,7 +52,7 @@ export async function GET() {
     const resp = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
     if (!resp.ok) throw new Error(`Facebook posts API ${resp.status}`);
     const data = await resp.json();
-    const posts = (data.data || []).map((p: any) => ({
+    const posts = (data.data || []).map((p: { id: string; message?: string; created_time?: string; permalink_url?: string; shares?: { summary?: { total_count?: number } } }) => ({
       id: p.id,
       message: p.message,
       created_time: p.created_time,
@@ -65,7 +65,7 @@ export async function GET() {
     return NextResponse.json(posts, {
       headers: { "Cache-Control": "no-store" },
     });
-  } catch (err) {
+  } catch {
     const cached = await readCache();
     if (cached) {
       return NextResponse.json(cached, { headers: { "Cache-Control": "public, max-age=0, s-maxage=300" } });

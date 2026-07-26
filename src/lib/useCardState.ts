@@ -83,9 +83,20 @@ export const useCardState = () => {
         if (!response.ok) return;
         const data = (await response.json()) as CardState;
         if (!mounted) return;
+        
+        // Smart merge: only update with non-empty values from API
+        // This prevents empty strings from overwriting good defaults
+        const cleanedData: Partial<CardState> = {};
+        for (const [key, value] of Object.entries(data || {})) {
+          // Only include non-empty values from API
+          if (value !== "" && value !== null && value !== undefined) {
+            cleanedData[key as keyof CardState] = value;
+          }
+        }
+        
         // apply server-provided data first
         setCardState((current) => {
-          const next = { ...current, ...data };
+          const next = { ...current, ...cleanedData };
           try {
             window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(next));
           } catch {}
@@ -99,7 +110,7 @@ export const useCardState = () => {
             const parsed = JSON.parse(raw) as CardState;
             // prevent stored email from temporarily overriding server state
             if (parsed && typeof parsed === "object") {
-              delete (parsed as any).heroEmail;
+              delete (parsed as Record<string, unknown>).heroEmail;
               setCardState((c) => ({ ...c, ...parsed }));
             }
           }

@@ -57,6 +57,21 @@ const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
     const parsed = JSON.parse(raw) as Partial<DiscordPresencePayload>;
     return normalizeState(parsed);
   } catch {
+    // If the local cache file doesn't exist (common on static hosts like Netlify),
+    // attempt to fetch presence from a remote URL if provided via env.
+    const remoteUrl = process.env.DISCORD_PRESENCE_URL;
+    if (remoteUrl) {
+      try {
+        const resp = await fetch(remoteUrl, { cache: "no-store" });
+        if (resp.ok) {
+          const parsed = (await resp.json()) as Partial<DiscordPresencePayload>;
+          return normalizeState(parsed);
+        }
+      } catch {
+        // fall through to default
+      }
+    }
+
     return defaultResponse;
   }
 };

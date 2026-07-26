@@ -18,14 +18,13 @@ export async function POST(request: Request) {
     // Default or configured Discord Webhook URL
     const targetWebhookUrl =
       webhookUrl ||
-      process.env.DISCORD_WEBHOOK_URL
-     // process.env.NEXT_DISCORD_WEBHOOK_URL;
+      process.env.DISCORD_WEBHOOK_URL ||
+      process.env.NEXT_PUBLIC_DISCORD_WEBHOOK_URL;
 
     // Discord Rich Embed formatting
     const discordPayload = {
       username: "Portfolio Bot",
-      avatar_url:
-        "https://discord.com/channels/1488382380531126353/1529350809303912519/1529350841293733908",
+      avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
       embeds: [
         {
           title: "📥 New Contact Submission",
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
       ],
     };
 
-    if (targetWebhookUrl && targetWebhookUrl.startsWith("https://discord.com/api/webhooks/")) {
+    if (targetWebhookUrl && /^https:\/\/discord(?:\.com|\.gg)\/api\/webhooks\//i.test(targetWebhookUrl)) {
 // Core module export or function definition that implements this feature.
       const response = await fetch(targetWebhookUrl, {
         method: "POST",

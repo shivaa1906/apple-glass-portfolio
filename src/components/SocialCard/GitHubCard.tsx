@@ -85,28 +85,6 @@ const formatCalendarDate = (value: string) => {
   }).format(parsed);
 };
 
-const formatCalendarTooltip = (value: string, count: number) => {
-  if (!value) return "Unknown date";
-
-// Core module export or function definition that implements this feature.
-  const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-// Core module export or function definition that implements this feature.
-    const suffix = count === 1 ? "contribution" : "contributions";
-    return `${count === 0 ? "No contributions" : `${count} ${suffix}`} on ${value}`;
-  }
-
-// Core module export or function definition that implements this feature.
-  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(parsed);
-// Core module export or function definition that implements this feature.
-  const formattedDate = formatCalendarDate(value);
-  if (count === 0) {
-    return `No contributions on ${weekday}, ${formattedDate}`;
-  }
-
-  return `${count === 1 ? "1 contribution" : `${count} contributions`} on ${weekday}, ${formattedDate}`;
-};
-
 const contributionLevelToColor = (level: ContributionLevel) => {
   switch (level) {
     case "FIRST_QUARTILE":

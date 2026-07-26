@@ -23,7 +23,9 @@ export type TrackPayload = {
   discordClicks?: number;
 };
 
-const ENDPOINT = (process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT || "/analytics/track").replace(/\/+$/, "");
+import { getAnalyticsBaseUrl, getAnalyticsEndpoint } from "./env";
+
+const ENDPOINT = getAnalyticsEndpoint().replace(/\/+$/, "");
 
 const getFingerprint = async (): Promise<string> => {
   try {
@@ -37,7 +39,7 @@ const getFingerprint = async (): Promise<string> => {
     const hashBuf = await crypto.subtle.digest("SHA-256", buf);
     const hashArr = Array.from(new Uint8Array(hashBuf));
     return hashArr.map((b) => b.toString(16).padStart(2, "0")).join("");
-  } catch (e) {
+  } catch {
     return String(Math.random()).slice(2);
   }
 };
@@ -61,7 +63,7 @@ export const useVisitorAnalytics = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-    } catch (e) {
+    } catch {
       // ignore
     }
   };
@@ -77,18 +79,25 @@ export const useVisitorAnalytics = () => {
   return { track, trackButton, trackDownload, ensureVisitor };
 };
 
-export const connectAnalyticsSSE = (onEvent: (ev: any) => void) => {
-  const base = (process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT || "").replace(/\/+$/, "") || undefined;
-  const url = base ? `${base.replace(/\/$/,"")}/events` : `/analytics/events`;
+export const connectAnalyticsSSE = (onEvent: (ev: unknown) => void) => {
+  const base = getAnalyticsBaseUrl();
+  const url = base ? `${base.replace(/\/$/, "")}/events` : `/analytics/events`;
   try {
     const es = new EventSource(url);
     es.onmessage = (e) => {
       try { onEvent(JSON.parse(e.data)); } catch {}
     };
-    es.addEventListener("analytics", (e:any)=> { try { onEvent(JSON.parse(e.data)); } catch {} });
+    es.addEventListener("analytics", (event: Event) => {
+      try {
+        const message = event as MessageEvent<string>;
+        onEvent(JSON.parse(message.data));
+      } catch {
+        // ignore
+      }
+    });
     es.onerror = () => { es.close(); };
     return () => es.close();
-  } catch (e) {
+  } catch {
     return () => {};
   }
 };

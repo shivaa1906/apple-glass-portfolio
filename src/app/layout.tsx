@@ -3,6 +3,7 @@
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { getSiteUrl } from "@/lib/env";
 import "./globals.css";
 
 // Core module export or function definition that implements this feature.
@@ -17,7 +18,7 @@ export const viewport: Viewport = {
 
 // Core module export or function definition that implements this feature.
 export const metadata: Metadata = {
-  metadataBase: new URL("https://shivaxroy.dev"),
+  metadataBase: new URL(getSiteUrl()),
   title: "Shivaxroy — Premium Apple Glass Social Portfolio",
   description:
     "An immersive, cinematic spatial portfolio website with floating glass cards, 3D tilt physics, 120fps scroll transitions, and live social showcases.",
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
     title: "Shivaxroy— Apple Glass Social Portfolio",
     description:
       "Cinematic floating glass portfolio with synchronized scroll physics, 3D cursor tilt, and spatial UI card showcases.",
-    url: "https://shivaxroy.dev",
+    url: getSiteUrl(),
     siteName: "Shivaxroy Spatial Portfolio",
     images: [
       {

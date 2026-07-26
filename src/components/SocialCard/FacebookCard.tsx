@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { ThumbsUp, Share2, ExternalLink, Globe } from "lucide-react";
+import { Share2, ExternalLink, Globe } from "lucide-react";
 import { FacebookIcon } from "@/components/Icons/SocialBrandIcons";
 import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 import { useCardState } from "@/lib/useCardState";
@@ -143,7 +143,6 @@ export const FacebookCard: React.FC = () => {
 
   useEffect(() => {
     if (facebookProfile?.followers_count == null) {
-      setDisplayFollowers("0");
       return;
     }
 
@@ -159,7 +158,6 @@ export const FacebookCard: React.FC = () => {
 
   useEffect(() => {
     if (facebookProfile?.fan_count == null) {
-      setDisplayFollowing("0");
       return;
     }
 

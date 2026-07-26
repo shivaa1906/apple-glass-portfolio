@@ -7,7 +7,7 @@ import { type FC, useEffect, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { Copy, ShieldCheck, Sparkles, Terminal } from "lucide-react";
+import { Copy, ShieldCheck, Terminal } from "lucide-react";
 import { DiscordIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 
@@ -44,7 +44,8 @@ export const DiscordCard: FC = () => {
   });
 
   useEffect(() => {
-    setHasMounted(true);
+    const timeoutId = window.setTimeout(() => setHasMounted(true), 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {

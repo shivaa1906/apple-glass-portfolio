@@ -142,7 +142,7 @@ export const YouTubeCard: React.FC = () => {
         value: youtubeData ? formatCount(youtubeData.videoCount) : fallbackStats[2],
       },
     ];
-  }, [profile.stats, youtubeData]);
+  }, [profile, youtubeData]);
 
   const handlePrev = () => setCurrentPage((page) => Math.max(page - 1, 0));
   const handleNext = () => setCurrentPage((page) => Math.min(page + 1, totalPages - 1));

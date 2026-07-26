@@ -1,5 +1,6 @@
 // File: app/api/card-state/route.ts
 // Description: API route for loading card state from the backend.
+// Works on all deployment platforms (Vercel, Netlify, etc.)
 
 import fs from "fs/promises";
 import path from "path";
@@ -33,11 +34,13 @@ type CardState = {
 
 // Core module export or function definition that implements this feature.
 const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
+
+// Initialize Supabase (priority for deployment)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-// Core module export or function definition that implements this feature.
+// Default state - guaranteed to always have these values
 const DEFAULT_STATE: CardState = {
   editableWebhookUrl: "",
   botLogsEnabled: true,
@@ -62,57 +65,128 @@ const DEFAULT_STATE: CardState = {
   heroStatus: "Available",
 };
 
-const readState = async (): Promise<CardState> => {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from("portfolio_card_state").select("value").eq("id", "main").maybeSingle();
-      if (!error && data?.value) {
-        const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
-        return { ...DEFAULT_STATE, ...parsed };
-      }
-    } catch {
-      // fall back to file storage
-    }
-  }
-
+/**
+ * Read from local file (development/self-hosted only)
+ */
+const readLocalFile = async (): Promise<CardState | null> => {
   try {
-// Core module export or function definition that implements this feature.
     const raw = await fs.readFile(STATE_PATH, "utf8");
-// Core module export or function definition that implements this feature.
     const parsed = JSON.parse(raw) as CardState;
-    return {
-      ...DEFAULT_STATE,
-      ...parsed,
-    };
-  } catch {
-    try {
-      await fs.writeFile(STATE_PATH, JSON.stringify(DEFAULT_STATE, null, 2), "utf8");
-    } catch {
-      // ignore
+    
+    // Merge with defaults, but skip empty values
+    // This prevents empty strings from overwriting good defaults
+    const cleanedParsed: Partial<CardState> = {};
+    for (const [key, value] of Object.entries(parsed || {})) {
+      // Only include non-empty values
+      if (value !== "" && value !== null && value !== undefined) {
+        cleanedParsed[key as keyof CardState] = value as never;
+      }
     }
-    return DEFAULT_STATE;
+    
+    return { ...DEFAULT_STATE, ...cleanedParsed };
+  } catch {
+    return null;
   }
 };
 
+/**
+ * Read from Supabase (deployment platforms)
+ */
+const readSupabase = async (): Promise<CardState | null> => {
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("portfolio_card_state")
+      .select("value")
+      .eq("id", "main")
+      .maybeSingle();
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      return null;
+    }
+
+    if (!data?.value) {
+      return null;
+    }
+
+    const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+    
+    // Merge with defaults, but skip empty values from Supabase
+    // This prevents empty strings from overwriting good defaults
+    const cleanedParsed: Partial<CardState> = {};
+    for (const [key, value] of Object.entries(parsed || {})) {
+      // Only include non-empty values
+      if (value !== "" && value !== null && value !== undefined) {
+        cleanedParsed[key as keyof CardState] = value as never;
+      }
+    }
+    
+    return { ...DEFAULT_STATE, ...cleanedParsed };
+  } catch (error) {
+    console.error("Failed to read from Supabase:", error);
+    return null;
+  }
+};
+
+/**
+ * Read state with fallback chain:
+ * 1. Try Supabase (works on all platforms)
+ * 2. Try local file (development)
+ * 3. Return defaults (guaranteed never to fail)
+ */
+const readState = async (): Promise<CardState> => {
+  // Try Supabase first (should work on deployment)
+  if (supabase) {
+    const supabaseState = await readSupabase();
+    if (supabaseState) {
+      console.log("✓ State loaded from Supabase");
+      return supabaseState;
+    }
+  }
+
+  // Fallback to local file (development)
+  const localState = await readLocalFile();
+  if (localState) {
+    console.log("✓ State loaded from local file");
+    return localState;
+  }
+
+  // Final fallback: return defaults (guaranteed to always have heroLocation & heroEmail)
+  console.log("⚠ Using default state (no Supabase or local file)");
+  return DEFAULT_STATE;
+};
+
+/**
+ * Write state - prioritizes Supabase, falls back to file
+ */
 const writeState = async (state: CardState) => {
+  // Try Supabase first
   if (supabase) {
     try {
       await supabase.from("portfolio_card_state").upsert({ id: "main", value: state });
+      console.log("✓ State written to Supabase");
       return;
-    } catch {
-      // fall back to file storage
+    } catch (error) {
+      console.warn("Failed to write to Supabase, trying local file:", error);
     }
   }
 
-  await fs.writeFile(STATE_PATH, JSON.stringify(state, null, 2), "utf8");
+  // Fallback to local file
+  try {
+    await fs.writeFile(STATE_PATH, JSON.stringify(state, null, 2), "utf8");
+    console.log("✓ State written to local file");
+  } catch (error) {
+    console.error("Failed to write state:", error);
+  }
 };
 
 export async function GET() {
-// Core module export or function definition that implements this feature.
   const state = await readState();
   return NextResponse.json(state, {
     headers: {
-      "Cache-Control": "public, max-age=0, s-maxage=300",
+      "Cache-Control": "public, max-age=0, s-maxage=60",
     },
   });
 }

@@ -14,7 +14,7 @@ export interface SocialProfile {
   actionLabel: string;
   actionUrl: string;
   badge?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // Core module export or function definition that implements this feature.

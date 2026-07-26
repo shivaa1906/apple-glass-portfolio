@@ -23,10 +23,9 @@ export const ResumeModal: FC<ResumeModalProps> = ({ isOpen, onClose }) => {
 // Core module export or function definition that implements this feature.
   const shouldReduceMotion = useReducedMotion();
 
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(() => getIsMobileDevice());
 
   useEffect(() => {
-    setIsMobileDevice(getIsMobileDevice());
     const handleResize = () => setIsMobileDevice(getIsMobileDevice());
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);

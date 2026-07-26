@@ -13,6 +13,7 @@ import {
   EmbedBuilder,
   type TextChannel,
 } from "discord.js";
+import { SupabaseCardState } from "./supabaseClient";
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 dotenv.config({ path: path.join(process.cwd(), ".env.local") });
@@ -269,7 +270,19 @@ const readCardState = async (): Promise<CardState> => {
 };
 
 const writeCardState = async (state: CardState) => {
+  // Write to local file first (always works)
   await writeJsonFile(STATE_PATH, state);
+
+  // Try to write to Supabase (with graceful fallback)
+  try {
+    const supabaseWritten = await SupabaseCardState.write(state);
+    if (supabaseWritten) {
+      console.log("✓ Card state synced to Supabase database");
+    }
+  } catch (err) {
+    // Supabase write failed but we still have local file - just log it
+    console.warn("⚠ Failed to sync to Supabase (using local file):", err);
+  }
 
   // If a frontend URL is provided, attempt to PATCH the remote card-state
   // so a separately deployed frontend can reflect bot-driven updates.
@@ -792,6 +805,24 @@ client.once("ready", async () => {
   } catch (error) {
     console.error("Failed to register slash commands:", error);
   }
+
+  // Test Supabase connection if configured
+  if (SupabaseCardState.isConfigured()) {
+    try {
+      const connected = await SupabaseCardState.testConnection();
+      if (connected) {
+        console.log("✓ Supabase database connected successfully");
+        console.log("📊 Bot commands will now update your portfolio in real-time via Supabase");
+      } else {
+        console.warn("⚠ Supabase not available - using local file storage");
+        console.warn("  Bot commands will still work, but updates may not sync to website");
+      }
+    } catch (error) {
+      console.warn("⚠ Could not test Supabase connection:", error);
+    }
+  } else {
+    console.log("ℹ Supabase not configured - set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable");
+  }
 });
 
 const updateDiscordState = async (user: import("discord.js").User, member: import("discord.js").GuildMember | null, presence: import("discord.js").Presence | null) => {
@@ -841,34 +872,47 @@ client.on("interactionCreate", async (interaction) => {
   const command = interaction.commandName;
   const user = `${interaction.user.username}#${interaction.user.discriminator}`;
 
-  const normalizeReply = (body: any, ephemeral = true) => {
-    if (typeof body === "string") return { content: body, ephemeral };
-    // if it's already an options object, merge ephemeral if not set
-    return { ...(body || {}), ephemeral: (body && typeof body.ephemeral === "boolean") ? body.ephemeral : ephemeral };
+  // Defer the reply immediately to avoid stale interaction timeout
+  try {
+    await interaction.deferReply({ ephemeral: true });
+  } catch (err) {
+    console.warn("Failed to defer reply:", err instanceof Error ? err.message : err);
+  }
+
+  const normalizeReply = (body: unknown, ephemeral = true): Record<string, unknown> => {
+    if (typeof body === "string") {
+      return { content: body, ephemeral };
+    }
+    const bodyObj = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
+    return { 
+      ...bodyObj, 
+      ephemeral: (bodyObj && typeof bodyObj.ephemeral === "boolean") ? bodyObj.ephemeral : ephemeral 
+    };
   };
 
-  const sendReply = async (body: any) => {
-    const payload = normalizeReply(body, true);
+  const sendReply = async (body: unknown) => {
+    const payload = normalizeReply(body, true) as Record<string, unknown>;
     // Ensure payload is not empty (Discord rejects empty messages).
     if (!payload.content && !payload.embeds && !payload.components) {
       payload.content = "\u200b"; // zero-width space
     }
     try {
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload as any);
+        await interaction.followUp(payload as Parameters<typeof interaction.followUp>[0]);
       } else {
-        await interaction.reply(payload as any);
+        await interaction.reply(payload as Parameters<typeof interaction.reply>[0]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Handle common Discord REST errors gracefully during reply:
       // - 10062 Unknown interaction: the interaction token is invalid/stale.
       // - 40060 Interaction has already been acknowledged.
-      if (err && (err.code === 10062)) {
-        console.warn("Reply failed: Unknown interaction (possibly stale).", err.message || err);
-        try { await interaction.followUp(payload as any).catch(()=>{}); } catch {}
+      const errObj = err as Record<string, unknown>;
+      if (errObj?.code === 10062) {
+        console.warn("Reply failed: Unknown interaction (possibly stale).", err instanceof Error ? err.message : err);
+        try { await interaction.followUp(payload as Parameters<typeof interaction.followUp>[0]).catch(()=>{}); } catch {}
         return;
       }
-      if (err && (err.code === 40060)) {
+      if (errObj?.code === 40060) {
         // Already acknowledged: the interaction was handled; try followUp
         try { await interaction.followUp(payload as any).catch(()=>{}); } catch {}
         return;
@@ -877,11 +921,11 @@ client.on("interactionCreate", async (interaction) => {
     }
   };
 
-  const failReply = async (message: any) => {
+  const failReply = async (message: unknown) => {
     await sendReply(message);
   };
 
-  const successReply = async (message: any) => {
+  const successReply = async (message: unknown) => {
     await sendReply(message);
   };
 
@@ -1165,7 +1209,7 @@ client.on("interactionCreate", async (interaction) => {
           { name: "First Seen", value: v.firstVisit||"-", inline:true },
           { name: "Last Seen", value: v.lastVisit||"-", inline:true }
         ).setColor(0x5865f2));
-        await successReply({ embeds: embeds as any[] } as any);
+        await successReply({ embeds });
         break;
       }
       case "visitor-stats": {
@@ -1323,7 +1367,7 @@ const server = http.createServer(async (req, res) => {
 
 const tryListen = (startPort: number, attempts = 5) => {
   const p = startPort;
-  server.once("error", (err: any) => {
+  server.once("error", (err: NodeJS.ErrnoException) => {
     if (err && err.code === "EADDRINUSE" && attempts > 0) {
       console.warn(`Port ${p} in use, trying ${p + 1}...`);
       // try next port

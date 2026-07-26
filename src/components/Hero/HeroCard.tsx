@@ -35,13 +35,17 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
   const containerRef = useRef<HTMLDivElement | null>(null);
 // Core module export or function definition that implements this feature.
   const [isResumeOpen, setIsResumeOpen] = useState(false);
+  
+  // Prevent hydration mismatch by tracking mount state
+  const [hasMounted, setHasMounted] = useState(false);
+  
   const getIsMobile = () =>
     typeof window !== "undefined" &&
     (window.innerWidth < 768 ||
       window.matchMedia("(hover: none)").matches ||
       window.matchMedia("(pointer: coarse)").matches);
 
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => getIsMobile());
 
 // Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);
@@ -53,7 +57,7 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
   const [mouseY, setMouseY] = useState("50%");
 
   useEffect(() => {
-    setIsMobile(getIsMobile());
+    setHasMounted(true);
     const handleResize = () => setIsMobile(getIsMobile());
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -118,19 +122,23 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
     setRotateY(0);
   };
 
-// Core module export or function definition that implements this feature.
+  // Use server-rendered initial values as primary, only update if API provides different values
+  // This prevents the flash when page loads
   const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
-  const locationLabel = cardState.heroLocation || initialHeroLocation || "";
+  
+  // Location: Use Supabase value if set, fallback to server initial
+  // Supabase values become the "new defaults" when bot edits them
+  const locationLabel = 
+    (cardState.heroLocation && cardState.heroLocation.trim() !== "") 
+      ? cardState.heroLocation 
+      : (initialHeroLocation && initialHeroLocation.trim() !== "" ? initialHeroLocation : "");
 
-  const [emailLabelState, setEmailLabelState] = useState<string>(
-    () => initialHeroEmail || HERO_DATA.email || ""
-  );
-
-  useEffect(() => {
-    if (cardState.heroEmail) setEmailLabelState(cardState.heroEmail);
-  }, [cardState.heroEmail]);
-
-  const emailLabel = emailLabelState;
+  // Email: Use Supabase value if set, fallback to server initial
+  // Supabase values become the "new defaults" when bot edits them
+  const emailLabel =
+    (cardState.heroEmail && cardState.heroEmail.trim() !== "")
+      ? cardState.heroEmail
+      : (initialHeroEmail && initialHeroEmail.trim() !== "" ? initialHeroEmail : "");
 
   const renderCardContent = () => (
     <>
@@ -182,10 +190,12 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
             {locationLabel}
           </span>
         ) : null}
-        <span className="flex items-center gap-1.5 bg-black/35 px-3 py-1.5 rounded-full border border-white/15">
-          <Mail size={14} className="text-cyan-400" />
-          {emailLabel}
-        </span>
+        {emailLabel ? (
+          <span className="flex items-center gap-1.5 bg-black/35 px-3 py-1.5 rounded-full border border-white/15">
+            <Mail size={14} className="text-cyan-400" />
+            {emailLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8">

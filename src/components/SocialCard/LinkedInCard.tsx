@@ -87,7 +87,7 @@ export const LinkedInCard: React.FC = () => {
               Career Timeline
             </h4>
             <div className="space-y-3">
-              {profile.details?.experiences?.map((exp: any, idx: number) => (
+              {profile.details?.experiences?.map((exp: { role: string; period: string; company: string; description: string }, idx: number) => (
                 <div
                   key={idx}
                   className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/10 hover:bg-white/[0.06] transition-colors"

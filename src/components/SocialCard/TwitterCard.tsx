@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { Heart, Repeat2, MessageCircle, Bookmark, ExternalLink, Pin, Sparkles } from "lucide-react";
+import { Heart, Repeat2, MessageCircle, Bookmark, ExternalLink, Pin } from "lucide-react";
 import { TwitterIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";

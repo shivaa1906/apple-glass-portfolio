@@ -26,7 +26,7 @@ export const ViewerCounter = () => {
 
     void fetchInitial();
 
-    const off = connectAnalyticsSSE((ev: any) => {
+    const off = connectAnalyticsSSE((ev: unknown) => {
       if (ev?.type === "new-visitor") {
         setCount((current) => current + 1);
       }
