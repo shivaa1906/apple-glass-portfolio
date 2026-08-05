@@ -1477,6 +1477,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Remote Discord presence endpoint for deployed frontend sync
+  if (req.url === "/presence" && req.method === "GET") {
+    try {
+      const raw = await fs.readFile(CACHE_PATH, "utf8");
+      const payload = JSON.parse(raw);
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(JSON.stringify(payload));
+    } catch {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "presence unavailable" }));
+    }
+    return;
+  }
+
   // Server-Sent Events for live analytics
   if (req.url === "/analytics/events" && req.method === "GET") {
     res.writeHead(200, {

@@ -2,29 +2,11 @@
 // Description: Discord presence API route to stream or fetch current status.
 
 import fs from "fs/promises";
-import { accessSync } from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 
 // Core module export or function definition that implements this feature.
-const CACHE_PATHS = [
-  path.join(process.cwd(), "bot", "discord-presence-cache.json"),
-  path.join(process.cwd(), "../bot", "discord-presence-cache.json"),
-  path.join(process.cwd(), "..", "bot", "discord-presence-cache.json"),
-];
-
-const CACHE_PATH = (() => {
-  for (const candidate of CACHE_PATHS) {
-    try {
-      accessSync(candidate);
-      return candidate;
-    } catch {
-      continue;
-    }
-  }
-
-  return path.join(process.cwd(), "bot", "discord-presence-cache.json");
-})();
+const CACHE_PATH = path.join(process.cwd(), "bot", "discord-presence-cache.json");
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresencePayload = {
@@ -45,33 +27,26 @@ const defaultResponse: DiscordPresencePayload = {
   username: process.env.DISCORD_USERNAME || "root_roy#0",
   displayName: process.env.DISCORD_DISPLAY_NAME || "Shiva",
   avatar: process.env.DISCORD_AVATAR || "/assets/profile_avatar1.jpg",
-  status: "dnd",
-  customStatus:
-    "msfvenom --arch x64 -p windows/x64/meterpreter/reverse_tcp LHOST=IP LPORT=PORT EXITFUNC=thread -f c",
-  activity: "Live coding Next.js Apple Glass UI",
-  voiceChannel: "voice-coding-lab",
-  serverCount: "76",
-  servers: [
-    "Elite Development",
-    "RBS Esports",
-    "Spatial Engineers Hub",
-    "Framer Motion Guild",
-    "Vision OS Labs",
-    "Glass UI Builders",
-  ],
-  botOnline: true,
+  status: "offline",
+  customStatus: "",
+  activity: "",
+  voiceChannel: undefined,
+  serverCount: "0",
+  servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
+  botOnline: false,
 };
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresencePayloadInput = DiscordPresencePayload & { avatarUrl?: string };
 
 const isPlaceholderPresence = (parsed: Partial<DiscordPresencePayloadInput>) => {
-  const placeholderNames = ["Unknown#0000", "Discord User"];
-  const usernamePlaceholder = placeholderNames.includes(parsed.username || "");
-  const displayNamePlaceholder = placeholderNames.includes(parsed.displayName || "");
-  const avatarPlaceholder = parsed.avatar === "/assets/profile_avatar1.jpg" && !parsed.avatarUrl;
+  const usernamePlaceholder = parsed.username === "Unknown#0000" || parsed.username === "Discord User";
+  const displayNamePlaceholder = parsed.displayName === "Discord User" || parsed.displayName === "Unknown#0000";
+  const avatarPlaceholder =
+    (parsed.avatar === "/assets/profile_avatar1.jpg" || parsed.avatarUrl === "/assets/profile_avatar1.jpg") &&
+    !parsed.avatarUrl?.startsWith("http");
 
-  return (usernamePlaceholder || displayNamePlaceholder) && avatarPlaceholder;
+  return usernamePlaceholder && displayNamePlaceholder && avatarPlaceholder;
 };
 
 const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPresencePayload => {
@@ -99,31 +74,42 @@ const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPr
   };
 };
 
-const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
+const fetchRemotePresence = async (): Promise<DiscordPresencePayload | null> => {
+  const remoteUrl = process.env.DISCORD_PRESENCE_URL;
+  if (!remoteUrl) return null;
+
   try {
-// Core module export or function definition that implements this feature.
-    const raw = await fs.readFile(CACHE_PATH, "utf8");
-// Core module export or function definition that implements this feature.
-    const parsed = JSON.parse(raw) as Partial<DiscordPresencePayload>;
+    const resp = await fetch(remoteUrl, { cache: "no-store" });
+    if (!resp.ok) return null;
+
+    const parsed = (await resp.json()) as Partial<DiscordPresencePayloadInput>;
+    if (isPlaceholderPresence(parsed)) return null;
     return normalizeState(parsed);
   } catch {
-    // If the local cache file doesn't exist (common on static hosts like Netlify),
-    // attempt to fetch presence from a remote URL if provided via env.
-    const remoteUrl = process.env.DISCORD_PRESENCE_URL;
-    if (remoteUrl) {
-      try {
-        const resp = await fetch(remoteUrl, { cache: "no-store" });
-        if (resp.ok) {
-          const parsed = (await resp.json()) as Partial<DiscordPresencePayload>;
-          return normalizeState(parsed);
-        }
-      } catch {
-        // fall through to default
-      }
-    }
-
-    return defaultResponse;
+    return null;
   }
+};
+
+const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
+  let localPresence: DiscordPresencePayload | null = null;
+
+  try {
+    const raw = await fs.readFile(CACHE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Partial<DiscordPresencePayloadInput>;
+    localPresence = normalizeState(parsed);
+    if (!isPlaceholderPresence(parsed)) {
+      return localPresence;
+    }
+  } catch {
+    // ignore local file errors and keep trying remote fallback
+  }
+
+  const remotePresence = await fetchRemotePresence();
+  if (remotePresence) {
+    return remotePresence;
+  }
+
+  return localPresence || defaultResponse;
 };
 
 const streamDiscordState = () => {

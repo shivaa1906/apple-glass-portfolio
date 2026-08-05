@@ -19,11 +19,14 @@ Set these on your deployment platform:
   ```
   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  DISCORD_PRESENCE_URL=https://your-bot-server.ngrok.io/presence
   ```
 
 **Netlify:**
 - Go to Site settings → Build & deploy → Environment
 - Add same variables as Vercel
+
+> If your bot runs locally and your deployed site needs live Discord presence, set `DISCORD_PRESENCE_URL` to the public URL of the local bot server's `/presence` endpoint.
 
 ### 3. **API Route Verification**
 - [ ] Test `/api/card-state` on deployed site
