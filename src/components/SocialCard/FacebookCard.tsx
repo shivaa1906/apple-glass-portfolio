@@ -22,6 +22,8 @@ type FacebookProfileResponse = {
   followers_count?: number;
   fan_count?: number;
   posts_count?: number;
+  warning?: string;
+  source?: string;
 };
 
 type FacebookPost = {
@@ -49,13 +51,13 @@ export const FacebookCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const [facebookProfile, setFacebookProfile] = useState<FacebookProfileResponse | null>(null);
   const [facebookPosts, setFacebookPosts] = useState<FacebookPost[] | null>(null);
-  const [facebookError, setFacebookError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [displayFollowers, setDisplayFollowers] = useState(() => resolveStatValue(profile.stats[0].value));
-  const [displayLikes, setDisplayLikes] = useState(() => resolveStatValue(profile.stats[1].value));
+  const [displayFollowing, setDisplayFollowing] = useState(() => resolveStatValue(profile.stats[1].value));
   const followerAnimationRef = useRef<number | null>(null);
-  const likesAnimationRef = useRef<number | null>(null);
+  const followingAnimationRef = useRef<number | null>(null);
   const previousFollowersRef = useRef<number | null>(null);
-  const previousLikesRef = useRef<number | null>(null);
+  const previousFollowingRef = useRef<number | null>(null);
 
 // Core module export or function definition that implements this feature.
   const animateValue = (
@@ -108,10 +110,13 @@ export const FacebookCard: React.FC = () => {
         throw new Error(data.error);
       }
       setFacebookProfile(data);
-      setFacebookError(null);
+      setFetchError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load Facebook page data.";
-      setFacebookError(message);
+      // Log failures so we can see why client fetches fail in production.
+      // This helps diagnose deploy/runtime issues (missing env, Graph API errors).
+      // eslint-disable-next-line no-console
+      console.error("Failed to load Facebook page:", error);
+      setFetchError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -138,14 +143,23 @@ export const FacebookCard: React.FC = () => {
     void fetchFacebookData();
     void fetchFacebookPosts();
 
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void fetchFacebookData();
+        void fetchFacebookPosts();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
 // Core module export or function definition that implements this feature.
     const followerFrame = followerAnimationRef.current;
-    const likeFrame = likesAnimationRef.current;
+    const followingFrame = followingAnimationRef.current;
 
     return () => {
       window.clearInterval(intervalId);
       if (followerFrame !== null) cancelAnimationFrame(followerFrame);
-      if (likeFrame !== null) cancelAnimationFrame(likeFrame);
+      if (followingFrame !== null) cancelAnimationFrame(followingFrame);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -170,37 +184,60 @@ export const FacebookCard: React.FC = () => {
     }
 
     const target = facebookProfile.fan_count;
-    const previous = previousLikesRef.current ?? target;
+    const previous = previousFollowingRef.current ?? target;
     if (previous !== target) {
-      animateValue(previous, target, setDisplayLikes, likesAnimationRef);
+      animateValue(previous, target, setDisplayFollowing, followingAnimationRef);
     } else {
-      setDisplayLikes(formatNumber(target));
+      setDisplayFollowing(formatNumber(target));
     }
-    previousLikesRef.current = target;
+    previousFollowingRef.current = target;
   }, [facebookProfile?.fan_count]);
 
 // Core module export or function definition that implements this feature.
   const coverUrl = facebookProfile?.cover || (typeof profile.details?.cover === "string" ? profile.details.cover : facebookProfile?.picture || "/assets/profile_avatar1.jpg");
-// Core module export or function definition that implements this feature.
   const avatarUrl = facebookProfile?.picture || profile.avatar || "/assets/profile_avatar1.jpg";
-// Core module export or function definition that implements this feature.
+  const proxied = (url?: string) => {
+    if (!url) return "/assets/profile_avatar1.jpg";
+    try {
+      const u = new URL(url);
+      if (u.protocol === "http:" || u.protocol === "https:") {
+        // If this is a Facebook CDN or Graph URL, let the browser load it directly
+        // (server-side proxy fetches to FB CDN often get blocked with 403). Use
+        // direct URLs for hosts under fbcdn.net, facebook.com, or fbsbx.com.
+        const host = u.hostname.toLowerCase();
+        if (host.endsWith(".fbcdn.net") || host.endsWith("facebook.com") || host.endsWith(".fbsbx.com")) {
+          return url;
+        }
+
+        // Otherwise use the server-side image proxy to avoid CORS and caching.
+        try {
+          const b64 = typeof window !== "undefined" ? btoa(url) : Buffer.from(url).toString("base64");
+          const b64url = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+          return `/api/image/proxy/${encodeURIComponent(b64url)}`;
+        } catch {
+          return `/api/image/proxy/${encodeURIComponent(encodeURIComponent(url))}`;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return url;
+  };
+  const proxiedCover = proxied(coverUrl || "/assets/profile_avatar1.jpg");
+  const proxiedAvatar = proxied(avatarUrl || "/assets/profile_avatar1.jpg");
   const cardState = useCardState();
-// Core module export or function definition that implements this feature.
   const displayName = facebookProfile?.name || profile.name;
-// Core module export or function definition that implements this feature.
   const displayHandle = facebookProfile?.username ? ensureHandle(facebookProfile.username) : profile.handle;
-// Core module export or function definition that implements this feature.
-  const followersValue = facebookProfile ? displayFollowers : resolveStatValue(profile.stats[0].value);
-  const likesValue = facebookProfile ? displayLikes : resolveStatValue(profile.stats[1].value);
-  const postsCount = facebookProfile?.posts_count && facebookProfile.posts_count > 0
+  const followersValue = facebookProfile?.followers_count != null ? displayFollowers : resolveStatValue(profile.stats[0].value);
+  const followingValue = facebookProfile?.fan_count != null ? displayFollowing : resolveStatValue(profile.stats[1].value);
+  const postsCount = facebookProfile?.posts_count != null
     ? String(facebookProfile.posts_count)
-    : Array.isArray(facebookPosts)
-    ? String(facebookPosts.length)
-    : resolveStatValue(profile.stats[2].value);
+    : facebookPosts?.length != null
+      ? String(facebookPosts.length)
+      : resolveStatValue(profile.stats[2].value);
 
   // If there are live posts from the API, prefer the latest post as the featured announcement.
   const latest = Array.isArray(facebookPosts) && facebookPosts.length ? facebookPosts[0] : null;
-  const showError = facebookError && facebookError.length > 0;
   const featuredPostDetails = profile.details?.featuredPost as Record<string, unknown> | undefined;
   const featuredPost = latest
     ? {
@@ -222,30 +259,51 @@ export const FacebookCard: React.FC = () => {
     <CardContainer id="facebook" accentGlow={profile.accentGlow}>
       <div className="flex flex-col h-full justify-between space-y-6">
         <div className="relative h-32 sm:h-40 w-full rounded-2xl overflow-hidden border border-white/10">
-          <Image
-            src={coverUrl}
+          <img
+            src={proxiedCover}
             alt="Facebook Cover"
-            fill
-            sizes="100vw"
+            loading="lazy"
+            decoding="async"
+            style={{ position: "absolute", height: "100%", width: "100%", left: 0, top: 0, right: 0, bottom: 0 }}
             className="object-cover brightness-75"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallbackApplied) {
+                img.dataset.fallbackApplied = "1";
+                img.src = "/assets/profile_avatar1.jpg";
+              }
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-          <div className="absolute bottom-3 left-4 flex items-center gap-2 text-xs font-semibold text-white/90 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
+            <div className="absolute bottom-3 left-4 flex items-center gap-2 text-xs font-semibold text-white/90 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
             <Globe size={13} className="text-blue-400" />
             <span>Official Tech & Design Community</span>
           </div>
+            {fetchError ? (
+              <div className="absolute top-2 right-2 bg-red-600/20 text-red-200 text-xs px-3 py-1 rounded">
+                Failed to load Facebook data
+              </div>
+            ) : null}
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 -mt-10 px-2">
           <div className="flex items-center gap-4">
             <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-blue-600 shadow-xl shadow-blue-500/30 z-10 flex-shrink-0 aspect-square">
               <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-black flex-shrink-0 aspect-square">
-                <Image
-                  src={avatarUrl}
+                <img
+                  src={proxiedAvatar}
                   alt={displayName}
-                  fill
-                  sizes="80px"
+                  loading="lazy"
+                  decoding="async"
+                  style={{ width: "100%", height: "100%" }}
                   className="object-cover rounded-full"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/assets/profile_avatar1.jpg";
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -261,21 +319,20 @@ export const FacebookCard: React.FC = () => {
                 />
               </div>
               <p className="text-sm font-medium text-blue-400">{displayHandle}</p>
-              {showError ? (
-                <p className="text-[11px] text-rose-300 mt-2">Facebook profile error: {facebookError}</p>
-              ) : null}
             </div>
           </div>
 
-          <a
-            href={actionUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-blue-600/30 hover:scale-105"
-          >
-            <span>{profile.actionLabel}</span>
-            <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={actionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-blue-600/30 hover:scale-105"
+            >
+              <span>{profile.actionLabel}</span>
+              <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">
@@ -284,8 +341,8 @@ export const FacebookCard: React.FC = () => {
             <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Followers</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-xl sm:text-2xl font-extrabold text-white">{likesValue}</div>
-            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Likes</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white">{followingValue}</div>
+            <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Following</div>
           </div>
           <div className="space-y-0.5">
             <div className="text-xl sm:text-2xl font-extrabold text-white">{postsCount}</div>

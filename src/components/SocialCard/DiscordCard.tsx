@@ -218,6 +218,26 @@ export const DiscordCard: FC = () => {
 // Core module export or function definition that implements this feature.
   const stats = profile.stats;
 
+  const proxied = (url?: string) => {
+    if (!url) return "/assets/profile_avatar1.jpg";
+    try {
+      const u = new URL(url);
+      if (u.protocol === "http:" || u.protocol === "https:") {
+        try {
+          const b64 = typeof window !== "undefined" ? btoa(url) : Buffer.from(url).toString("base64");
+          const b64url = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+          return `/api/image/proxy/${encodeURIComponent(b64url)}`;
+        } catch {
+          return `/api/image/proxy/${encodeURIComponent(encodeURIComponent(url))}`;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return url;
+  };
+  const proxiedAvatar = proxied(presence.avatar || "/assets/profile_avatar1.jpg");
+
   return (
     <CardContainer id="discord" accentGlow={profile.accentGlow}>
       <div className="flex flex-col h-full justify-between space-y-5 sm:space-y-6" suppressHydrationWarning>
@@ -226,11 +246,12 @@ export const DiscordCard: FC = () => {
             <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-indigo-600 shadow-lg shadow-indigo-500/30 flex-shrink-0 aspect-square">
               <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-black flex-shrink-0 aspect-square">
                 <Image
-                  src={presence.avatar || "/assets/profile_avatar1.jpg"}
+                  src={proxiedAvatar}
                   alt={presence.displayName}
                   fill
                   sizes="80px"
                   className="object-cover rounded-full"
+                  unoptimized
                 />
               </div>
               <div className={`absolute bottom-0 right-0 w-5 h-5 rounded-full ${statusDotColor} border-2 border-black flex items-center justify-center flex-shrink-0 aspect-square`}>

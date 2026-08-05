@@ -67,6 +67,11 @@ const DEFAULT_STATE: CardState = {
   heroStatusVisible: true,
 };
 
+const sanitizePublicState = (state: CardState): CardState => {
+  const { botLogsEnabled, botLogChannelId, editableWebhookUrl, adminUserIds, ...publicState } = state;
+  return publicState;
+};
+
 /**
  * Read from local file (development/self-hosted only)
  */
@@ -186,7 +191,7 @@ const writeState = async (state: CardState) => {
 
 export async function GET() {
   const state = await readState();
-  return NextResponse.json(state, {
+  return NextResponse.json(sanitizePublicState(state), {
     headers: {
       "Cache-Control": "public, max-age=0, s-maxage=60",
     },

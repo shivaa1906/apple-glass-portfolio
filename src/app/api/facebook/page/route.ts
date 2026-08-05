@@ -17,6 +17,11 @@ type FacebookPagePayload = {
   link: string;
 };
 
+type FacebookPageResponse = FacebookPagePayload & {
+  warning?: string;
+  source?: string;
+};
+
 // Core module export or function definition that implements this feature.
 export const dynamic = "force-dynamic";
 // Core module export or function definition that implements this feature.
@@ -84,14 +89,35 @@ const writeCache = async (payload: FacebookPagePayload) => {
 };
 
 export async function GET() {
-// Core module export or function definition that implements this feature.
   const pageId = process.env.FACEBOOK_PAGE_ID;
-// Core module export or function definition that implements this feature.
-  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 
-  if (!pageId || !accessToken) {
+  if (!pageId) {
     return NextResponse.json(
-      { error: "FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN are required." },
+      { error: "FACEBOOK_PAGE_ID is required." },
+      { status: 500 }
+    );
+  }
+
+  if (!accessToken) {
+    const cached = await readCache();
+    if (cached) {
+      return NextResponse.json(
+        {
+          ...cached,
+          warning: "Using cached Facebook page data because FACEBOOK_ACCESS_TOKEN is not configured.",
+          source: "cache",
+        },
+        {
+          headers: {
+            "Cache-Control": "public, max-age=0, s-maxage=300",
+          },
+        }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN (or FACEBOOK_PAGE_ACCESS_TOKEN) are required." },
       { status: 500 }
     );
   }
@@ -119,6 +145,9 @@ export async function GET() {
         const parsed = JSON.parse(errorText);
         if (parsed?.error?.message) {
           message = parsed.error.message;
+          if (parsed.error.code === 190 || parsed.error.code === 200) {
+            message += " Please use a valid Facebook Page Access Token for the new Pages experience.";
+          }
         }
       } catch {
         if (errorText) {
@@ -170,11 +199,18 @@ export async function GET() {
   } catch (error) {
     const cached = await readCache();
     if (cached) {
-      return NextResponse.json(cached, {
-        headers: {
-          "Cache-Control": "public, max-age=0, s-maxage=300",
+      return NextResponse.json(
+        {
+          ...cached,
+          warning: "Using cached Facebook page data because the Graph API fetch failed.",
+          source: "cache",
         },
-      });
+        {
+          headers: {
+            "Cache-Control": "public, max-age=0, s-maxage=300",
+          },
+        }
+      );
     }
 
     const message = error instanceof Error ? error.message : "Unable to load Facebook page data.";

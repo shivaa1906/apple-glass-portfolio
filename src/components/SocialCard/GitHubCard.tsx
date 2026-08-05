@@ -144,8 +144,6 @@ export const GitHubCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const [statsLoading, setStatsLoading] = useState(true);
 // Core module export or function definition that implements this feature.
-  const [statsError, setStatsError] = useState<string | null>(null);
-// Core module export or function definition that implements this feature.
   const [contributionCalendar, setContributionCalendar] = useState<GitHubContributionsCalendar | null>(null);
 // Core module export or function definition that implements this feature.
   const contributionCacheRef = useRef<GitHubContributionsCalendar | null>(null);
@@ -160,7 +158,6 @@ export const GitHubCard: React.FC = () => {
     const syncGitHubData = async () => {
       try {
         setStatsLoading(true);
-        setStatsError(null);
 
 // Core module export or function definition that implements this feature.
         const response = await fetch("/api/github", {
@@ -175,10 +172,8 @@ export const GitHubCard: React.FC = () => {
         const data: GitHubProfileResponse = await response.json();
         setGithubData(data);
         setCurrentPage(0);
-      } catch (error) {
-// Core module export or function definition that implements this feature.
-        const message = error instanceof Error ? error.message : "Something went wrong while loading GitHub data.";
-        setStatsError(message);
+      } catch (_error) {
+        // Suppress client-side log noise for GitHub data fetch failures.
       } finally {
         setStatsLoading(false);
       }
@@ -209,10 +204,7 @@ export const GitHubCard: React.FC = () => {
           setContributionCalendar(data);
           contributionCacheRef.current = data;
         }
-      } catch (error) {
-// Core module export or function definition that implements this feature.
-        const message = error instanceof Error ? error.message : "Unable to load GitHub contributions.";
-        console.error(message);
+      } catch (_error) {
         setContributionCalendar((current) => current ?? { totalContributions: 0, weeks: [] });
       }
     };
@@ -373,7 +365,7 @@ const parsed = parseGithubContributionDate(day.date);
               <p className="text-sm font-medium text-gray-300">{profile.handle}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>
               {statsLoading && <p className="text-[11px] text-white/50 mt-2">Syncing live GitHub metrics...</p>}
-              {statsError && <p className="text-[11px] text-rose-300 mt-2">{statsError}</p>}
+
             </div>
           </div>
 

@@ -53,8 +53,6 @@ export const YouTubeCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const [statsLoading, setStatsLoading] = useState(true);
 // Core module export or function definition that implements this feature.
-  const [statsError, setStatsError] = useState<string | null>(null);
-// Core module export or function definition that implements this feature.
   const [currentPage, setCurrentPage] = useState(0);
 // Core module export or function definition that implements this feature.
   const [dragStartX, setDragStartX] = useState<number | null>(null);
@@ -65,7 +63,6 @@ export const YouTubeCard: React.FC = () => {
     const syncYoutubeData = async () => {
       try {
         setStatsLoading(true);
-        setStatsError(null);
 
 // Core module export or function definition that implements this feature.
         const response = await fetch("/api/youtube", {
@@ -80,10 +77,8 @@ export const YouTubeCard: React.FC = () => {
         const data: YouTubeStatsResponse = await response.json();
         setYoutubeData(data);
         setCurrentPage(0);
-      } catch (error) {
-// Core module export or function definition that implements this feature.
-        const message = error instanceof Error ? error.message : "Something went wrong while loading YouTube data.";
-        setStatsError(message);
+      } catch (_error) {
+        // Suppress client-side log noise for YouTube fetch failures.
       } finally {
         setStatsLoading(false);
       }
@@ -197,7 +192,6 @@ export const YouTubeCard: React.FC = () => {
               <p className="text-sm font-medium text-red-400">{profile.handle}</p>
               <p className="text-xs text-white/60 mt-1 max-w-lg">{profile.bio}</p>
               {statsLoading && <p className="text-[11px] text-white/50 mt-2">Syncing live subscriber count...</p>}
-              {statsError && <p className="text-[11px] text-rose-300 mt-2">{statsError}</p>}
             </div>
           </div>
 

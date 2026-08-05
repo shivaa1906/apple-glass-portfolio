@@ -189,7 +189,7 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
     actionUrl: "https://facebook.com",
     badge: "Official Page",
     details: {
-      cover: "/assets/youtube_thumb.jpg",
+      cover: "/assets/profile_avatar1.jpg",
       featuredPost: {
         text: "Just released our latest open-source Apple Glass UI kit for Next.js 15! Check out the live demo and let us know your feedback. 🚀✨",
         date: "July 18, 2026",

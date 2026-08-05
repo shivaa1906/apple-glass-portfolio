@@ -50,15 +50,11 @@ export const InstagramCard: React.FC = () => {
   const [instagramProfile, setInstagramProfile] = useState<InstagramProfileResponse | null>(null);
 // Core module export or function definition that implements this feature.
   const [profileLoading, setProfileLoading] = useState(true);
-// Core module export or function definition that implements this feature.
-  const [profileError, setProfileError] = useState<string | null>(null);
 
   // The latest 3 public posts are pulled from the Instagram posts API route.
   const [featuredPosts, setFeaturedPosts] = useState<InstagramPostResponse[]>([]);
 // Core module export or function definition that implements this feature.
   const [postsLoading, setPostsLoading] = useState(true);
-// Core module export or function definition that implements this feature.
-  const [postsError, setPostsError] = useState<string | null>(null);
   const [totalLikes, setTotalLikes] = useState<number | null>(null);
   const [totalComments, setTotalComments] = useState<number | null>(null);
   const [totalReach, setTotalReach] = useState<number | null>(null);
@@ -74,8 +70,6 @@ export const InstagramCard: React.FC = () => {
       try {
         setProfileLoading(true);
         setPostsLoading(true);
-        setProfileError(null);
-        setPostsError(null);
 
         // Build default date range (last 30 days) and request profile insights
         const end = new Date();
@@ -126,12 +120,8 @@ export const InstagramCard: React.FC = () => {
         setProfileReachValue(typeof profileJson.profileReach === "number" ? profileJson.profileReach : null);
         setProfileSince(profileJson.since ? new Date(profileJson.since) : start);
         setProfileUntil(profileJson.until ? new Date(profileJson.until) : end);
-      } catch (error) {
+      } catch (_error) {
         if (!isMounted) return;
-// Core module export or function definition that implements this feature.
-        const message = error instanceof Error ? error.message : "Something went wrong while loading Instagram data.";
-        setProfileError(message);
-        setPostsError(message);
       } finally {
         if (!isMounted) return;
         setProfileLoading(false);
@@ -208,9 +198,6 @@ export const InstagramCard: React.FC = () => {
               {profileLoading && (
                 <p className="text-[11px] text-white/50 mt-2">Loading live Instagram data...</p>
               )}
-              {profileError && (
-                <p className="text-[11px] text-rose-300 mt-2">{profileError}</p>
-              )}
             </div>
           </div>
 
@@ -255,8 +242,6 @@ export const InstagramCard: React.FC = () => {
 
           {postsLoading ? (
             <div className="text-xs text-white/50">Loading latest posts...</div>
-          ) : postsError ? (
-            <div className="text-xs text-rose-300">{postsError}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {featuredPosts.slice(0, 3).map((post) => (

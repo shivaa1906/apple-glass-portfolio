@@ -49,10 +49,19 @@ export const revalidate = 0;
 
 export async function GET() {
   const pageId = process.env.FACEBOOK_PAGE_ID;
-  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 
-  if (!pageId || !accessToken) {
-    return NextResponse.json({ error: "FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN are required." }, { status: 500 });
+  if (!pageId) {
+    return NextResponse.json({ error: "FACEBOOK_PAGE_ID is required." }, { status: 500 });
+  }
+
+  if (!accessToken) {
+    const cached = await readCache();
+    if (cached) {
+      return NextResponse.json(cached, { headers: { "Cache-Control": "public, max-age=0, s-maxage=300" } });
+    }
+
+    return NextResponse.json({ error: "FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN (or FACEBOOK_PAGE_ACCESS_TOKEN) are required." }, { status: 500 });
   }
 
   // request recent posts (message and created_time)

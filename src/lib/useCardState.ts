@@ -59,13 +59,18 @@ const DEFAULT_CARD_STATE: CardState = {
   heroStatusVisible: true,
 };
 
+const sanitizeCardState = (state: CardState): CardState => {
+  const { botLogsEnabled, botLogChannelId, editableWebhookUrl, adminUserIds, ...publicState } = state;
+  return publicState;
+};
+
 const readPersistedCardState = (): CardState => {
   if (typeof window === "undefined") return DEFAULT_CARD_STATE;
   try {
     const raw = window.sessionStorage.getItem("portfolio-card-state");
     if (!raw) return DEFAULT_CARD_STATE;
     const parsed = JSON.parse(raw) as CardState;
-    return { ...DEFAULT_CARD_STATE, ...parsed };
+    return { ...DEFAULT_CARD_STATE, ...sanitizeCardState(parsed) };
   } catch {
     return DEFAULT_CARD_STATE;
   }
@@ -86,11 +91,12 @@ export const useCardState = () => {
         if (!response.ok) return;
         const data = (await response.json()) as CardState;
         if (!mounted) return;
+        const publicData = sanitizeCardState(data);
         
         // Smart merge: only update with non-empty values from API
         // This prevents empty strings from overwriting good defaults
         const cleanedData: Partial<CardState> = {};
-        for (const [key, value] of Object.entries(data || {})) {
+        for (const [key, value] of Object.entries(publicData || {})) {
           // Only include non-empty values from API
           if (value !== "" && value !== null && value !== undefined) {
             const typedKey = key as keyof CardState;
@@ -104,7 +110,7 @@ export const useCardState = () => {
         setCardState((current) => {
           const next = { ...current, ...cleanedData };
           try {
-            window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(next));
+            window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(sanitizeCardState(next)));
           } catch {}
           return next;
         });
@@ -117,7 +123,7 @@ export const useCardState = () => {
             // prevent stored email from temporarily overriding server state
             if (parsed && typeof parsed === "object") {
               delete (parsed as Record<string, unknown>).heroEmail;
-              setCardState((c) => ({ ...c, ...parsed }));
+              setCardState((c) => ({ ...c, ...sanitizeCardState(parsed as CardState) }));
             }
           }
         } catch {}
@@ -150,7 +156,7 @@ export const useCardState = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(cardState));
+      window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(sanitizeCardState(cardState)));
     } catch {
       // ignore storage errors
     }

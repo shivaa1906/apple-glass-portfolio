@@ -126,9 +126,6 @@ const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
 const LOG_PATH = path.join(process.cwd(), "bot", "command-logs.json");
 const ANALYTICS_PATH = path.join(process.cwd(), "bot", "analytics.json");
 
-// SSE connections for live updates
-const sseClients: http.ServerResponse[] = [];
-
 const readAnalytics = async (): Promise<AnalyticsStore> => {
   try {
     const raw = await fs.readFile(ANALYTICS_PATH, "utf8");
@@ -144,7 +141,6 @@ const writeAnalytics = async (data: AnalyticsStore) => {
   await fs.writeFile(ANALYTICS_PATH, JSON.stringify(data, null, 2), "utf8");
 };
 
-import crypto from "crypto";
 import crypto from "crypto";
 import { WebSocketServer } from "ws";
 // SSE connections for live updates
@@ -219,7 +215,6 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
   }
 
   await writeAnalytics(analytics);
-  await writeAnalytics(analytics);
 
   // notify SSE clients
   const msg = JSON.stringify({ type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now });
@@ -244,17 +239,6 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
       }
     });
   } catch {}
-
-  // notify SSE clients
-  const msg = JSON.stringify({ type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now });
-  sseClients.forEach((res) => {
-    try {
-      res.write(`event: analytics\n`);
-      res.write(`data: ${msg}\n\n`);
-    } catch (e) {
-      // ignore
-    }
-  });
 
   return { visitorId: vid, isNew };
 };
@@ -492,6 +476,27 @@ const sendServerLog = async (content: string, opts?: { title?: string }) => {
     await text.send({ embeds: [embed] }).catch(() => undefined);
   } catch (err) {
     console.error("Failed to send server log:", err);
+  }
+};
+
+const findOrCreatePortfolioLogChannel = async (guild: import("discord.js").Guild, name: string) => {
+  const normalized = name.trim().toLowerCase();
+  const existing = guild.channels.cache.find(
+    (c) => c.isTextBased() && c.name.toLowerCase() === normalized,
+  ) as import("discord.js").TextChannel | undefined;
+
+  if (existing) return existing;
+
+  try {
+    return await guild.channels.create({
+      name: name.trim(),
+      type: ChannelType.GuildText,
+      topic: "Portfolio bot errors and logs",
+      reason: "Create portfolio log channel",
+    });
+  } catch (err) {
+    console.error("Failed to create portfolio log channel:", err);
+    return null;
   }
 };
 
@@ -831,6 +836,24 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
     ],
   },
   {
+    name: "portfolio-logs",
+    description: "Set or create the portfolio log channel for bot errors and logs.",
+    options: [
+      {
+        name: "channelid",
+        type: 3,
+        description: "Existing text channel ID for portfolio logs.",
+        required: false,
+      },
+      {
+        name: "channelname",
+        type: 3,
+        description: "New channel name to create for portfolio logs.",
+        required: false,
+      },
+    ],
+  },
+  {
     name: "display-viewer",
     description: "Enable or disable visitor counter.",
     options: [
@@ -1106,8 +1129,19 @@ client.once("ready", async () => {
   }
 
   try {
-    await client.application?.commands.set(commands);
-    console.log("Slash commands registered.");
+    if (GUILD_ID) {
+      const guild = await client.guilds.fetch(GUILD_ID);
+      if (guild) {
+        await guild.commands.set(commands);
+        console.log(`Slash commands registered to guild ${GUILD_ID}.`);
+      } else {
+        await client.application?.commands.set(commands);
+        console.log("Slash commands registered globally (guild fetch failed).");
+      }
+    } else {
+      await client.application?.commands.set(commands);
+      console.log("Slash commands registered globally.");
+    }
   } catch (error) {
     console.error("Failed to register slash commands:", error);
   }
@@ -1427,6 +1461,7 @@ client.on("interactionCreate", async (interaction) => {
         await successReply(`Discord server link updated.`);
         await logCommand(command, user, `Discord link updated to ${link}`);
         break;
+      }
       case "logs": {
         const stateValue = interaction.options.getString("state", true);
         const enabled = stateValue === "on";
@@ -1525,7 +1560,6 @@ client.on("interactionCreate", async (interaction) => {
           await failReply("Failed to pin message.");
         }
         break;
-      }
       }
       case "set-community-announcement": {
         const text = interaction.options.getString("text", true).trim();
@@ -1685,6 +1719,50 @@ client.on("interactionCreate", async (interaction) => {
             }
           }
         }
+        break;
+      }
+      case "portfolio-logs": {
+        const guild = interaction.guild;
+        if (!guild) {
+          await failReply("This command must be used in a guild.");
+          break;
+        }
+
+        const channelId = interaction.options.getString("channelid")?.trim();
+        const channelName = interaction.options.getString("channelname")?.trim();
+
+        if (!channelId && !channelName) {
+          await failReply("Provide either an existing channel ID or a channel name to create.");
+          break;
+        }
+
+        let channel: import("discord.js").TextChannel | null = null;
+        if (channelId) {
+          const found = await guild.channels.fetch(channelId).catch(() => null);
+          if (!found || !found.isTextBased()) {
+            await failReply("Channel ID not found or not a text channel.");
+            break;
+          }
+          channel = found as import("discord.js").TextChannel;
+        }
+
+        if (!channel && channelName) {
+          channel = await findOrCreatePortfolioLogChannel(guild, channelName);
+          if (!channel) {
+            await failReply("Failed to create or find the portfolio log channel.");
+            break;
+          }
+        }
+
+        if (!channel) {
+          await failReply("Unable to resolve a log channel from the provided inputs.");
+          break;
+        }
+
+        await saveCardState({ botLogsEnabled: true, botLogChannelId: channel.id });
+        await successReply(`Portfolio logs channel set to <#${channel.id}>.`);
+        await logCommand(command, user, `Portfolio logs channel set to ${channel.id} (${channel.name})`);
+        await sendServerLog(`Portfolio logs are now enabled in <#${channel.id}>.`, { title: "Portfolio Logs Enabled" });
         break;
       }
       case "display-viewer": {
