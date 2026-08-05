@@ -208,16 +208,16 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
     avatar: "/assets/profile_avatar1.jpg",
     bio: "",
     stats: [
-      { label: "Status", value: "Ok" },
-      { label: "Servers", value: "3" },
-      { label: "Roles", value: "Admin" },
+      { label: "Status", value: "" },
+      { label: "Servers", value: "" },
+      { label: "Roles", value: "" },
     ],
     actionLabel: "Copy Discord Tag",
     actionUrl: "#copy",
     badge: "Developer Verified",
     details: {
       customStatus: "",
-      servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
+      servers: [""],
     },
   },
   {
