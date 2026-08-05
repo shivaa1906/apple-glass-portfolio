@@ -24,6 +24,7 @@ export type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  heroStatusVisible?: boolean;
   botLogChannelId?: string;
   adminUserIds?: string[];
   viewerCounterEnabled?: boolean;
@@ -54,6 +55,7 @@ const DEFAULT_CARD_STATE: CardState = {
   viewerCounterEnabled: true,
   heroEmail: "",
   heroStatus: "Available",
+  heroStatusVisible: true,
 };
 
 const readPersistedCardState = (): CardState => {
@@ -90,7 +92,10 @@ export const useCardState = () => {
         for (const [key, value] of Object.entries(data || {})) {
           // Only include non-empty values from API
           if (value !== "" && value !== null && value !== undefined) {
-            cleanedData[key as keyof CardState] = value;
+            const typedKey = key as keyof CardState;
+            if (typeof value === "string" || typeof value === "boolean" || Array.isArray(value)) {
+              (cleanedData as Record<keyof CardState, unknown>)[typedKey] = value as never;
+            }
           }
         }
         

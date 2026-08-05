@@ -16,6 +16,7 @@ type DiscordPresencePayload = {
   status: string;
   customStatus: string;
   activity: string;
+  voiceChannel?: string;
   serverCount: string;
   servers: string[];
   botOnline: boolean;
@@ -29,6 +30,7 @@ const defaultResponse: DiscordPresencePayload = {
   status: "offline",
   customStatus: "",
   activity: "",
+  voiceChannel: undefined,
   serverCount: "0",
   servers: [],
   botOnline: false,
@@ -44,6 +46,7 @@ const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPr
   status: parsed.status || defaultResponse.status,
   customStatus: parsed.customStatus || defaultResponse.customStatus,
   activity: parsed.activity || defaultResponse.activity,
+  voiceChannel: parsed.voiceChannel || defaultResponse.voiceChannel,
   serverCount: parsed.serverCount || defaultResponse.serverCount,
   servers: Array.isArray(parsed.servers) ? parsed.servers : defaultResponse.servers,
   botOnline: typeof parsed.botOnline === "boolean" ? parsed.botOnline : parsed.status !== "offline",

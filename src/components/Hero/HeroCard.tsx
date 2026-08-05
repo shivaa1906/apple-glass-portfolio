@@ -125,7 +125,13 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
   // Use server-rendered initial values as primary, only update if API provides different values
   // This prevents the flash when page loads
   const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
-  
+  const statusVisible = cardState.heroStatusVisible !== false;
+  const normalizedStatus = statusLabel.trim().toLowerCase();
+  const isUnavailable = normalizedStatus === "unavailable";
+  const statusDotColor = isUnavailable ? "bg-red-400" : "bg-emerald-400";
+  const statusBorderColor = isUnavailable ? "border-red-500/40" : "border-emerald-500/40";
+  const statusTextColor = isUnavailable ? "text-red-300" : "text-emerald-300";
+
   // Location: Use Supabase value if set, fallback to server initial
   // Supabase values become the "new defaults" when bot edits them
   const locationLabel = 
@@ -159,10 +165,12 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
             />
           </div>
         </div>
-        <div className="absolute bottom-0 right-0 z-20 flex items-center gap-1.5 bg-black/85 px-2.5 py-1 rounded-full border border-emerald-500/40 shadow-lg">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping flex-shrink-0" />
-          <span className="text-[10px] font-semibold text-emerald-300 tracking-wider whitespace-nowrap">{statusLabel.toUpperCase()}</span>
-        </div>
+        {statusVisible ? (
+          <div className={`absolute bottom-0 right-0 z-20 flex items-center gap-1.5 bg-black/85 px-2.5 py-1 rounded-full border ${statusBorderColor} shadow-lg`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${statusDotColor} animate-ping flex-shrink-0`} />
+            <span className={`text-[10px] font-semibold ${statusTextColor} tracking-wider whitespace-nowrap`}>{statusLabel.toUpperCase()}</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="inline-block relative mb-3">

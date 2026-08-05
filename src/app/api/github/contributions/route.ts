@@ -3,52 +3,125 @@
 
 import { NextResponse } from "next/server";
 
-// Core module export or function definition that implements this feature.
 export const revalidate = 600;
 
-// Type definition used to describe the structure of data in this component.
 type ContributionLevel = "NONE" | "FIRST_QUARTILE" | "SECOND_QUARTILE" | "THIRD_QUARTILE" | "FOURTH_QUARTILE";
 
-// Type definition used to describe the structure of data in this component.
 type GitHubContributionDay = {
   contributionCount: number;
   date: string;
   contributionLevel: ContributionLevel;
 };
 
-// Type definition used to describe the structure of data in this component.
 type GitHubContributionWeek = {
   contributionDays: GitHubContributionDay[];
 };
 
-// Type definition used to describe the structure of data in this component.
 type GitHubContributionsCalendar = {
   totalContributions: number;
   weeks: GitHubContributionWeek[];
 };
 
-// Core module export or function definition that implements this feature.
+type GitHubGraphQLContributionDay = {
+  date?: string;
+  contributionCount?: number;
+  contributionLevel?: ContributionLevel;
+};
+
+type GitHubGraphQLContributionWeek = {
+  contributionDays?: GitHubGraphQLContributionDay[];
+};
+
+type GitHubGraphQLResponse = {
+  data?: {
+    user?: {
+      contributionsCollection?: {
+        contributionCalendar?: {
+          totalContributions?: number;
+          weeks?: GitHubGraphQLContributionWeek[];
+        };
+      };
+    };
+  };
+};
+
 const defaultCalendar: GitHubContributionsCalendar = {
   totalContributions: 0,
   weeks: Array.from({ length: 53 }, () => ({ contributionDays: [] })),
 };
 
-export async function GET() {
-// Core module export or function definition that implements this feature.
-  const githubUsername = process.env.GITHUB_USERNAME ?? "shivaa1906";
-// Core module export or function definition that implements this feature.
-  const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_API_TOKEN;
+const normalizeContributionLevel = (value?: string | number): ContributionLevel => {
+  switch (value) {
+    case 1:
+    case "1":
+      return "FIRST_QUARTILE";
+    case 2:
+    case "2":
+      return "SECOND_QUARTILE";
+    case 3:
+    case "3":
+      return "THIRD_QUARTILE";
+    case 4:
+    case "4":
+      return "FOURTH_QUARTILE";
+    default:
+      return "NONE";
+  }
+};
 
-  if (!githubToken) {
-    console.warn("GitHub contributions route: no token configured, returning empty calendar fallback.");
-    return NextResponse.json(defaultCalendar, {
-      headers: {
-        "Cache-Control": "public, max-age=600, s-maxage=600",
-      },
-    });
+async function fetchPublicContributionCalendar(username: string): Promise<GitHubContributionsCalendar | null> {
+  const response = await fetch(`https://github.com/users/${encodeURIComponent(username)}/contributions`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      Accept: "text/html,application/xhtml+xml",
+    },
+  });
+
+  if (!response.ok) {
+    return null;
   }
 
-// Core module export or function definition that implements this feature.
+  const html = await response.text();
+  const cells = Array.from(html.matchAll(/<td[^>]*data-date="([0-9-]+)"[^>]*data-level="([0-9]+)"[^>]*>/gi));
+
+  if (cells.length === 0) {
+    return null;
+  }
+
+  const totalSlots = 53 * 7;
+  const days = cells.slice(0, totalSlots).map(([, date, level]) => ({
+    date,
+    contributionCount: 0,
+    contributionLevel: normalizeContributionLevel(level),
+  }));
+
+  const weeks: GitHubContributionWeek[] = Array.from({ length: 53 }, (_, weekIndex) => {
+    const contributionDays = Array.from({ length: 7 }, (_, dayIndex) => {
+      const day = days[weekIndex * 7 + dayIndex];
+      if (!day) {
+        return {
+          date: "",
+          contributionCount: 0,
+          contributionLevel: "NONE" as ContributionLevel,
+        };
+      }
+
+      return day;
+    });
+
+    return { contributionDays };
+  });
+
+  return {
+    totalContributions: days.reduce((sum, day) => sum + (day.contributionLevel === "NONE" ? 0 : 1), 0),
+    weeks,
+  };
+}
+
+export async function GET() {
+  const githubUsername = process.env.GITHUB_USERNAME ?? "shivaa1906";
+  const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_API_TOKEN;
+
   const graphqlQuery = `
     query($login: String!) {
       user(login: $login) {
@@ -69,84 +142,59 @@ export async function GET() {
   `;
 
   try {
-// Core module export or function definition that implements this feature.
-    const response = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${githubToken}`,
-      },
-      body: JSON.stringify({
-        query: graphqlQuery,
-        variables: { login: githubUsername },
-      }),
-    });
-
-    if (!response.ok) {
-// Core module export or function definition that implements this feature.
-      const bodyText = await response.text();
-      console.error("GitHub GraphQL error", response.status, bodyText);
-      return NextResponse.json(defaultCalendar, {
+    if (githubToken) {
+      const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
         headers: {
-          "Cache-Control": "public, max-age=600, s-maxage=600",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${githubToken}`,
         },
+        body: JSON.stringify({
+          query: graphqlQuery,
+          variables: { login: githubUsername },
+        }),
       });
-    }
 
-// Type definition used to describe the structure of data in this component.
-    type GitHubGraphQLContributionDay = {
-      date?: string;
-      contributionCount?: number;
-      contributionLevel?: ContributionLevel;
-    };
+      if (response.ok) {
+        const json = (await response.json()) as GitHubGraphQLResponse;
+        const calendar = json?.data?.user?.contributionsCollection?.contributionCalendar;
 
-// Type definition used to describe the structure of data in this component.
-    type GitHubGraphQLContributionWeek = {
-      contributionDays?: GitHubGraphQLContributionDay[];
-    };
+        if (calendar) {
+          const weeks = (calendar.weeks || []).map((week) => ({
+            contributionDays: (week.contributionDays || []).map((day) => ({
+              date: day.date ?? "",
+              contributionCount: Number(day.contributionCount ?? 0),
+              contributionLevel: day.contributionLevel ?? "NONE",
+            })),
+          }));
 
-// Type definition used to describe the structure of data in this component.
-    type GitHubGraphQLResponse = {
-      data?: {
-        user?: {
-          contributionsCollection?: {
-            contributionCalendar?: {
-              totalContributions?: number;
-              weeks?: GitHubGraphQLContributionWeek[];
-            };
+          const result: GitHubContributionsCalendar = {
+            totalContributions: Number(calendar.totalContributions ?? 0),
+            weeks,
           };
-        };
-      };
-    };
 
-// Core module export or function definition that implements this feature.
-    const json = (await response.json()) as GitHubGraphQLResponse;
-// Core module export or function definition that implements this feature.
-    const calendar = json?.data?.user?.contributionsCollection?.contributionCalendar;
+          return NextResponse.json(result, {
+            headers: {
+              "Cache-Control": "public, max-age=600, s-maxage=600",
+            },
+          });
+        }
+      } else {
+        const bodyText = await response.text();
+        console.warn("GitHub GraphQL unavailable, falling back to public calendar scrape.", response.status, bodyText);
+      }
+    }
 
-    if (!calendar) {
-      return NextResponse.json(defaultCalendar, {
+    const fallbackCalendar = await fetchPublicContributionCalendar(githubUsername);
+    if (fallbackCalendar) {
+      return NextResponse.json(fallbackCalendar, {
         headers: {
           "Cache-Control": "public, max-age=600, s-maxage=600",
         },
       });
     }
 
-    const weeks = (calendar.weeks || []).map((week) => ({
-      contributionDays: (week.contributionDays || []).map((day) => ({
-        date: day.date ?? "",
-        contributionCount: Number(day.contributionCount ?? 0),
-        contributionLevel: day.contributionLevel ?? "NONE",
-      })),
-    }));
-
-// Core module export or function definition that implements this feature.
-    const result: GitHubContributionsCalendar = {
-      totalContributions: Number(calendar.totalContributions ?? 0),
-      weeks,
-    };
-
-    return NextResponse.json(result, {
+    return NextResponse.json(defaultCalendar, {
       headers: {
         "Cache-Control": "public, max-age=600, s-maxage=600",
       },

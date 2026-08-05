@@ -65,11 +65,12 @@ export async function GET() {
     return NextResponse.json(posts, {
       headers: { "Cache-Control": "no-store" },
     });
-  } catch {
+  } catch (error) {
     const cached = await readCache();
     if (cached) {
       return NextResponse.json(cached, { headers: { "Cache-Control": "public, max-age=0, s-maxage=300" } });
     }
+    console.error("Facebook posts route error:", error);
     return NextResponse.json({ error: "Unable to load Facebook posts." }, { status: 500 });
   }
 }

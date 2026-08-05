@@ -23,7 +23,7 @@ export type TrackPayload = {
   discordClicks?: number;
 };
 
-import { getAnalyticsBaseUrl, getAnalyticsEndpoint } from "./env";
+import { getAnalyticsEndpoint } from "./env";
 
 const ENDPOINT = getAnalyticsEndpoint().replace(/\/+$/, "");
 
@@ -79,25 +79,6 @@ export const useVisitorAnalytics = () => {
   return { track, trackButton, trackDownload, ensureVisitor };
 };
 
-export const connectAnalyticsSSE = (onEvent: (ev: unknown) => void) => {
-  const base = getAnalyticsBaseUrl();
-  const url = base ? `${base.replace(/\/$/, "")}/events` : `/analytics/events`;
-  try {
-    const es = new EventSource(url);
-    es.onmessage = (e) => {
-      try { onEvent(JSON.parse(e.data)); } catch {}
-    };
-    es.addEventListener("analytics", (event: Event) => {
-      try {
-        const message = event as MessageEvent<string>;
-        onEvent(JSON.parse(message.data));
-      } catch {
-        // ignore
-      }
-    });
-    es.onerror = () => { es.close(); };
-    return () => es.close();
-  } catch {
-    return () => {};
-  }
+export const connectAnalyticsSSE = (_onEvent: (ev: unknown) => void) => {
+  return () => {};
 };

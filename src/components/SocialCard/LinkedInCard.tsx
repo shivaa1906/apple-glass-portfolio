@@ -7,7 +7,7 @@ import React from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { Briefcase, Award, CheckCircle, ExternalLink } from "lucide-react";
+import { Briefcase, Award, CheckCircle, ExternalLink, Eye } from "lucide-react";
 import { LinkedInIcon } from "@/components/Icons/SocialBrandIcons";
 import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 import { useCardState } from "@/lib/useCardState";
@@ -18,15 +18,42 @@ export const LinkedInCard: React.FC = () => {
   const cardState = useCardState();
 
 // Core module export or function definition that implements this feature.
-  const headline = cardState.linkedinHeadline || profile.details?.headline;
+  const headline = String(cardState.linkedinHeadline || (typeof profile.details?.headline === "string" ? profile.details.headline : ""));
 // Core module export or function definition that implements this feature.
-  const bio = cardState.linkedinHeadlineBio || profile.bio;
+  const bio = String(cardState.linkedinHeadlineBio || profile.bio);
 // Core module export or function definition that implements this feature.
   const stats = [
     { label: "Connections", value: cardState.linkedinConnections || profile.stats[0].value },
     { label: "Followers", value: cardState.linkedinFollowers || profile.stats[1].value },
     { label: "Recommendations", value: cardState.linkedinRecommendations || profile.stats[2].value },
   ];
+
+  const [profileReachValue, setProfileReachValue] = React.useState<number | null>(null);
+  const [profileSince, setProfileSince] = React.useState<Date | null>(null);
+  const [profileUntil, setProfileUntil] = React.useState<Date | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchLinkedin = async () => {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 30);
+      const qs = `?since=${encodeURIComponent(start.toISOString())}&until=${encodeURIComponent(end.toISOString())}`;
+      try {
+        const res = await fetch(`/api/linkedin${qs}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!isMounted) return;
+        setProfileReachValue(typeof json.profileReach === "number" ? json.profileReach : null);
+        setProfileSince(json.since ? new Date(json.since) : start);
+        setProfileUntil(json.until ? new Date(json.until) : end);
+      } catch (err) {
+        console.warn("LinkedIn fetch failed", err);
+      }
+    };
+    fetchLinkedin();
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <CardContainer id="linkedin" accentGlow={profile.accentGlow}>
@@ -55,20 +82,29 @@ export const LinkedInCard: React.FC = () => {
                   shadow="0 0 18px rgba(10,102,194,0.18)"
                 />
               </div>
-              <p className="text-sm font-medium text-blue-400">{headline}</p>
-              <p className="text-xs text-white/60 mt-1 max-w-lg">{bio}</p>
+                  <p className="text-sm font-medium text-blue-400">{headline}</p>
+                  <p className="text-xs text-white/60 mt-1 max-w-lg">{bio}</p>
             </div>
           </div>
-
-          <a
-            href={profile.actionUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-blue-500/30 hover:scale-105"
-          >
-            <span>{profile.actionLabel}</span>
-            <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
-          </a>
+              <div className="flex flex-col items-end gap-2">
+                <a
+                  href={profile.actionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-blue-500/30 hover:scale-105"
+                >
+                  <span>{profile.actionLabel}</span>
+                  <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
+                </a>
+                {profileReachValue !== null && profileSince && profileUntil && (
+                  <div className="text-xs text-white/50 flex items-center gap-3 mt-1">
+                    <span className="text-xs text-white/50">{`${profileSince.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${profileUntil.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}</span>
+                    <span className="flex items-center gap-1">
+                      <Eye size={14} className="text-white/60" /> {String(profileReachValue)}
+                    </span>
+                  </div>
+                )}
+              </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">
@@ -87,21 +123,23 @@ export const LinkedInCard: React.FC = () => {
               Career Timeline
             </h4>
             <div className="space-y-3">
-              {profile.details?.experiences?.map((exp: { role: string; period: string; company: string; description: string }, idx: number) => (
-                <div
-                  key={idx}
-                  className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/10 hover:bg-white/[0.06] transition-colors"
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm font-bold text-white">{exp.role}</span>
-                    <span className="text-[11px] text-blue-400 font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20">
-                      {exp.period}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/50 font-medium mt-0.5">{exp.company}</p>
-                  <p className="text-xs text-white/70 mt-1.5">{exp.description}</p>
-                </div>
-              ))}
+              {Array.isArray(profile.details?.experiences)
+                ? (profile.details.experiences as Array<{ role?: string; period?: string; company?: string; description?: string }>).map((exp, idx: number) => (
+                    <div
+                      key={idx}
+                      className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/10 hover:bg-white/[0.06] transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-bold text-white">{exp.role || ""}</span>
+                        <span className="text-[11px] text-blue-400 font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20">
+                          {exp.period || ""}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/50 font-medium mt-0.5">{exp.company || ""}</p>
+                      <p className="text-xs text-white/70 mt-1.5">{exp.description || ""}</p>
+                    </div>
+                  ))
+                : null}
             </div>
           </div>
 
@@ -111,15 +149,17 @@ export const LinkedInCard: React.FC = () => {
               Core Competencies & Endorsements
             </h4>
             <div className="flex flex-wrap gap-2 pt-1">
-              {profile.details?.skills?.map((skill: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 hover:border-blue-500/40 hover:bg-blue-500/10 text-xs text-white/90 font-medium transition-all"
-                >
-                  <CheckCircle size={13} className="text-blue-400" />
-                  <span>{skill}</span>
-                </div>
-              ))}
+              {Array.isArray(profile.details?.skills)
+                ? (profile.details.skills as string[]).map((skill, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 hover:border-blue-500/40 hover:bg-blue-500/10 text-xs text-white/90 font-medium transition-all"
+                    >
+                      <CheckCircle size={13} className="text-blue-400" />
+                      <span>{skill}</span>
+                    </div>
+                  ))
+                : null}
             </div>
           </div>
         </div>

@@ -130,7 +130,7 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
   {
     id: "github",
     platform: "GitHub",
-    name: "Shiva Gopi",
+    name: "",
     handle: "@shivaa1906",
     color: "#F0F6FC",
     accentGlow: "rgba(240, 246, 252, 0.3)",
@@ -174,22 +174,22 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
   {
     id: "facebook",
     platform: "Facebook",
-    name: "Shiva Gopi",
+    name: "Shiva gopi",
     handle: "@shivaxroy",
     color: "#1877F2",
     accentGlow: "rgba(24, 119, 242, 0.4)",
     avatar: "/assets/profile_avatar1.jpg",
     bio: "Community page sharing software development tutorials, keynote highlights, tech hardware reviews, and industry insights.",
     stats: [
-      { label: "Followers", value: "0" },
-      { label: "Likes", value: "0" },
-      { label: "Community", value: "0" },
+      { label: "Followers", value: "" },
+      { label: "Likes", value: "" },
+      { label: "Posts", value: "" },
     ],
     actionLabel: "Visit Facebook Page",
     actionUrl: "https://facebook.com",
     badge: "Official Page",
     details: {
-      cover: "/assets/youtube_thumb_1.jpg",
+      cover: "/assets/youtube_thumb.jpg",
       featuredPost: {
         text: "Just released our latest open-source Apple Glass UI kit for Next.js 15! Check out the live demo and let us know your feedback. 🚀✨",
         date: "July 18, 2026",
@@ -201,8 +201,8 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
   {
     id: "discord",
     platform: "Discord",
-    name: "Shiva gopi",
-    handle: "root_roy",
+    name: "",
+    handle: "",
     color: "#5865F2",
     accentGlow: "rgba(88, 101, 242, 0.4)",
     avatar: "/assets/profile_avatar1.jpg",

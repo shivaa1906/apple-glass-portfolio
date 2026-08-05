@@ -16,11 +16,13 @@ import { FacebookCard } from "@/components/SocialCard/FacebookCard";
 import { DiscordCard } from "@/components/SocialCard/DiscordCard";
 import { TwitterCard } from "@/components/SocialCard/TwitterCard";
 import { FooterCard } from "@/components/Footer/FooterCard";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker/AnalyticsTracker";
 
 export default function Home() {
   return (
     <LenisProvider>
       <main className="relative min-h-screen bg-[#050505] text-white selection:bg-blue-500 selection:text-white">
+        <AnalyticsTracker />
         {/* Dynamic Background Canvas Layer */}
         <BackgroundCanvas />
 

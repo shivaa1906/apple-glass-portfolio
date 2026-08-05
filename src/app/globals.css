@@ -111,6 +111,7 @@
 .discord-loading-glow {
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .discord-loading-glow::before {
@@ -118,20 +119,21 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 140%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.12) 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(255, 255, 255, 0.12) 70%,
+    rgba(255, 255, 255, 0.14) 28%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0.14) 72%,
     transparent 100%
   );
+  background-size: 240% 100%;
   transform: translateX(-120%);
   filter: blur(10px);
   opacity: 0.95;
-  animation: discordLoadingGlow 2s ease-in-out infinite;
+  animation: discordLoadingGlow 1.8s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -150,6 +152,37 @@
   background-size: 200% 100%;
   animation: continuousLightSlide 2.5s linear infinite;
   box-shadow: 0 0 12px #0a84ff, 0 0 24px rgba(10, 132, 255, 0.6);
+}
+
+/* Network Status Toast */
+.network-toast {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(7, 10, 18, 0.78);
+  animation: networkToastIn 220ms ease-out;
+}
+
+@keyframes networkToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin-slow 1s linear infinite;
 }
 
 /* Subtle Text Gradient */

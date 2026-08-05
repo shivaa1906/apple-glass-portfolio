@@ -31,6 +31,7 @@ type DiscordProfileState = {
   desktopStatus: string;
   mobileStatus: string;
   webStatus: string;
+  voiceChannel?: string;
   botOnline: boolean;
   serverCount: string;
   servers: string[];
@@ -56,6 +57,7 @@ type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  heroStatusVisible?: boolean;
   botLogChannelId?: string;
   adminUserIds?: string[];
   viewerCounterEnabled?: boolean;
@@ -245,6 +247,7 @@ const DEFAULT_CARD_STATE: CardState = {
   adminUserIds: [],
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
+  heroStatusVisible: true,
 };
 
 const readJsonFile = async <T>(filePath: string, fallback: T): Promise<T> => {
@@ -612,6 +615,30 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
     ],
   },
   {
+    name: "avalable",
+    description: "Set the hero status to Available.",
+  },
+  {
+    name: "unavalable",
+    description: "Set the hero status to Unavailable.",
+  },
+  {
+    name: "status",
+    description: "Show or hide the hero status badge.",
+    options: [
+      {
+        name: "state",
+        type: 3,
+        description: "on or off",
+        required: true,
+        choices: [
+          { name: "on", value: "on" },
+          { name: "off", value: "off" },
+        ],
+      },
+    ],
+  },
+  {
     name: "add-admin",
     description: "Grant another user permission to run bot commands (developer only).",
     options: [
@@ -690,7 +717,12 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
 ];
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
 });
 
 const formatActivity = (activity: Activity) => {
@@ -717,6 +749,12 @@ const formatActivity = (activity: Activity) => {
   }
 };
 
+const debugLog = (...args: unknown[]) => {
+  if (process.env.DEBUG_DISCORD_PRESENCE === "1") {
+    console.log("[DISCORD-PRESENCE]", ...args);
+  }
+};
+
 const saveCardState = async (updates: Partial<CardState>) => {
   const currentState = await readCardState();
   const nextState = {
@@ -727,7 +765,30 @@ const saveCardState = async (updates: Partial<CardState>) => {
   return nextState;
 };
 
-const buildDiscordState = async (user: import("discord.js").User, member: import("discord.js").GuildMember | null, presence: import("discord.js").Presence | null): Promise<DiscordProfileState> => {
+const findUserGuildAndMember = async (): Promise<import("discord.js").GuildMember | null> => {
+  for (const guild of client.guilds.cache.values()) {
+    const member = await guild.members
+      .fetch({ user: USER_ID, force: true, withPresences: true })
+      .catch(() => null);
+    if (member) {
+      debugLog(`Found tracked user in guild: ${guild.name} (${guild.id})`, {
+        memberId: member.id,
+        presence: !!member.presence,
+        voiceChannel: member.voice?.channel?.name,
+      });
+      return member;
+    }
+  }
+  debugLog("Tracked user not found in any cached guild.");
+  return null;
+};
+
+const buildDiscordState = async (
+  user: import("discord.js").User,
+  member: import("discord.js").GuildMember | null,
+  presence: import("discord.js").Presence | null,
+  voiceChannelOverride?: string,
+): Promise<DiscordProfileState> => {
   const globalDisplayName = user.globalName || user.username;
   const guildNickname = member?.nickname || "";
   const displayName = globalDisplayName || user.username;
@@ -742,9 +803,58 @@ const buildDiscordState = async (user: import("discord.js").User, member: import
   const desktopStatus = clientStatus?.desktop || "offline";
   const mobileStatus = clientStatus?.mobile || "offline";
   const webStatus = clientStatus?.web || "offline";
-  const guild = GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null;
-  const serverCount = guild ? String(1) : String(client.guilds.cache.size);
-  const servers = guild ? [guild.name] : client.guilds.cache.map((g) => g.name).slice(0, 6);
+  const guild = member?.guild ?? (GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null);
+  const serverCount = String(client.guilds.cache.size);
+  const servers = client.guilds.cache.map((g) => g.name).slice(0, 6);
+
+  let voiceChannel: string | undefined;
+  const resolveVoiceChannel = (channel: import("discord.js").VoiceChannel | import("discord.js").StageChannel | import("discord.js").VoiceBasedChannel | null | undefined, guild: import("discord.js").Guild | null): string | undefined => {
+    if (!channel) return undefined;
+    const serverName = channel.guild?.name || guild?.name;
+    const channelName = channel.name || "unknown";
+    return serverName ? `${serverName} • ${channelName}` : channelName;
+  };
+
+  if (member?.voice?.channel) {
+    voiceChannel = resolveVoiceChannel(member.voice.channel, member.guild);
+  } else if (guild) {
+    try {
+      const voiceState = await guild.voiceStates.fetch(USER_ID).catch(() => null);
+      debugLog("Voice state fetch result", {
+        guild: guild.name,
+        voiceState: voiceState ? { channelId: voiceState.channelId, channelName: voiceState.channel?.name } : null,
+      });
+      if (voiceState?.channel) {
+        voiceChannel = resolveVoiceChannel(voiceState.channel, guild);
+      } else if (voiceState?.channelId) {
+        const channel = await guild.channels.fetch(voiceState.channelId).catch(() => null);
+        debugLog("Resolved voice channel by ID", {
+          channelId: voiceState.channelId,
+          channelName: channel && "name" in channel ? channel.name : null,
+        });
+        if (channel && "name" in channel) {
+          voiceChannel = `${guild.name} • ${channel.name}`;
+        }
+      }
+    } catch (error) {
+      debugLog("Voice channel resolution error", error);
+      voiceChannel = undefined;
+    }
+  }
+
+  if (!voiceChannel && voiceChannelOverride) {
+    voiceChannel = voiceChannelOverride;
+  }
+
+  debugLog("buildDiscordState result", {
+    username: `${user.username}#${user.discriminator}`,
+    status,
+    activity,
+    voiceChannel,
+    memberHasVoice: !!member?.voice?.channel,
+    guildHasVoiceStates: !!guild,
+    voiceChannelOverride,
+  });
 
   return {
     username: `${user.username}#${user.discriminator}`,
@@ -759,6 +869,7 @@ const buildDiscordState = async (user: import("discord.js").User, member: import
     desktopStatus,
     mobileStatus,
     webStatus,
+    voiceChannel,
     botOnline: status !== "offline",
     serverCount,
     servers,
@@ -767,9 +878,12 @@ const buildDiscordState = async (user: import("discord.js").User, member: import
 };
 
 const syncPresenceForUser = async () => {
-  const guild = GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null;
   const user = await client.users.fetch(USER_ID).catch(() => null);
-  const member = guild ? await guild.members.fetch(USER_ID).catch(() => null) : null;
+  const guild = GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null;
+  const member = guild
+    ? await guild.members.fetch({ user: USER_ID, force: true, withPresences: true }).catch(() => null)
+    : await findUserGuildAndMember();
+  debugLog("syncPresenceForUser", { userId: USER_ID, guild: guild?.name, memberFound: !!member, presence: !!member?.presence });
   const presence = member?.presence || null;
 
   if (!user) {
@@ -825,8 +939,13 @@ client.once("ready", async () => {
   }
 });
 
-const updateDiscordState = async (user: import("discord.js").User, member: import("discord.js").GuildMember | null, presence: import("discord.js").Presence | null) => {
-  const state = await buildDiscordState(user, member, presence);
+const updateDiscordState = async (
+  user: import("discord.js").User,
+  member: import("discord.js").GuildMember | null,
+  presence: import("discord.js").Presence | null,
+  voiceChannelOverride?: string,
+) => {
+  const state = await buildDiscordState(user, member, presence, voiceChannelOverride);
   try {
     await savePresence(state);
   } catch (error) {
@@ -840,8 +959,10 @@ client.on("presenceUpdate", async (_oldPresence, newPresence) => {
   }
 
   const user = newPresence.user;
-  const guild = GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null;
-  const member = guild ? await guild.members.fetch(USER_ID).catch(() => null) : null;
+  const guild = newPresence.guild ?? (GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null);
+  const member = guild
+    ? await guild.members.fetch({ user: USER_ID, force: true, withPresences: true }).catch(() => null)
+    : null;
   await updateDiscordState(user, member, newPresence);
 });
 
@@ -851,7 +972,9 @@ client.on("userUpdate", async (_oldUser, newUser) => {
   }
 
   const guild = GUILD_ID ? await client.guilds.fetch(GUILD_ID).catch(() => null) : null;
-  const member = guild ? await guild.members.fetch(USER_ID).catch(() => null) : null;
+  const member = guild
+    ? await guild.members.fetch({ user: USER_ID, force: true, withPresences: true }).catch(() => null)
+    : null;
   const presence = member?.presence || null;
   await updateDiscordState(newUser, member, presence);
 });
@@ -864,6 +987,42 @@ client.on("guildMemberUpdate", async (_oldMember, newMember) => {
   const user = newMember.user;
   const presence = newMember.presence || null;
   await updateDiscordState(user, newMember, presence);
+});
+
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  const state = newState?.member?.id === USER_ID ? newState : oldState?.member?.id === USER_ID ? oldState : null;
+  let member = state?.member ?? null;
+  let voiceChannelOverride: string | undefined;
+
+  if ((newState?.member?.id === USER_ID || oldState?.member?.id === USER_ID) && newState.guild) {
+    if (!member) {
+      member = await newState.guild.members.fetch({ user: USER_ID, force: true, withPresences: true }).catch(() => null);
+    }
+
+    const channel = newState.channel ?? (newState.channelId ? await newState.guild.channels.fetch(newState.channelId).catch(() => null) : null);
+    if (channel && "name" in channel) {
+      voiceChannelOverride = `${newState.guild.name} • ${channel.name}`;
+    } else if (!newState.channelId) {
+      voiceChannelOverride = undefined;
+    }
+  }
+
+  if (!member || member.id !== USER_ID) {
+    return;
+  }
+
+  debugLog("voiceStateUpdate", {
+    userId: USER_ID,
+    guild: newState.guild?.name || oldState.guild?.name,
+    channelId: newState.channelId || oldState.channelId,
+    memberPresence: !!member.presence,
+    memberVoiceChannel: member.voice?.channel?.name,
+    voiceChannelOverride,
+  });
+
+  const user = member.user;
+  const presence = member.presence || null;
+  await updateDiscordState(user, member, presence, voiceChannelOverride);
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -890,6 +1049,20 @@ client.on("interactionCreate", async (interaction) => {
     };
   };
 
+  const scheduleDelete = async (message: any) => {
+    if (!message) return;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      if (typeof message.delete === "function") {
+        await message.delete().catch(() => undefined);
+      } else if (typeof interaction.deleteReply === "function") {
+        await interaction.deleteReply().catch(() => undefined);
+      }
+    } catch {
+      // ignore deletion failures
+    }
+  };
+
   const sendReply = async (body: unknown) => {
     const payload = normalizeReply(body, true) as Record<string, unknown>;
     // Ensure payload is not empty (Discord rejects empty messages).
@@ -897,11 +1070,15 @@ client.on("interactionCreate", async (interaction) => {
       payload.content = "\u200b"; // zero-width space
     }
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload as Parameters<typeof interaction.followUp>[0]);
+      let sentMessage: any;
+      if (interaction.deferred && !interaction.replied && typeof interaction.editReply === "function") {
+        sentMessage = await interaction.editReply(payload as Parameters<typeof interaction.editReply>[0]);
+      } else if (!interaction.deferred && !interaction.replied) {
+        sentMessage = await interaction.reply(payload as Parameters<typeof interaction.reply>[0]);
       } else {
-        await interaction.reply(payload as Parameters<typeof interaction.reply>[0]);
+        sentMessage = await interaction.followUp({ ...payload, ephemeral: true } as Parameters<typeof interaction.followUp>[0]);
       }
+      void scheduleDelete(sentMessage);
     } catch (err: unknown) {
       // Handle common Discord REST errors gracefully during reply:
       // - 10062 Unknown interaction: the interaction token is invalid/stale.
@@ -909,12 +1086,18 @@ client.on("interactionCreate", async (interaction) => {
       const errObj = err as Record<string, unknown>;
       if (errObj?.code === 10062) {
         console.warn("Reply failed: Unknown interaction (possibly stale).", err instanceof Error ? err.message : err);
-        try { await interaction.followUp(payload as Parameters<typeof interaction.followUp>[0]).catch(()=>{}); } catch {}
+        try {
+          const sentMessage = await interaction.followUp({ ...payload, ephemeral: true } as Parameters<typeof interaction.followUp>[0]).catch(() => undefined);
+          void scheduleDelete(sentMessage);
+        } catch {}
         return;
       }
       if (errObj?.code === 40060) {
         // Already acknowledged: the interaction was handled; try followUp
-        try { await interaction.followUp(payload as any).catch(()=>{}); } catch {}
+        try {
+          const sentMessage = await interaction.followUp({ ...payload, ephemeral: true } as any).catch(() => undefined);
+          void scheduleDelete(sentMessage);
+        } catch {}
         return;
       }
       console.error("Failed to send interaction reply:", err);
@@ -1070,6 +1253,28 @@ client.on("interactionCreate", async (interaction) => {
         await saveCardState({ heroLocation: text });
         await successReply(`Hero location updated.`);
         await logCommand(command, user, `Hero location set to: ${text}`);
+        break;
+      }
+      case "avalable":
+      case "available": {
+        await saveCardState({ heroStatus: "Available" });
+        await successReply(`Hero status updated to Available.`);
+        await logCommand(command, user, `Hero status set to Available`);
+        break;
+      }
+      case "unavalable":
+      case "unavailable": {
+        await saveCardState({ heroStatus: "Unavailable" });
+        await successReply(`Hero status updated to Unavailable.`);
+        await logCommand(command, user, `Hero status set to Unavailable`);
+        break;
+      }
+      case "status": {
+        const stateValue = interaction.options.getString("state", true);
+        const visible = stateValue === "on";
+        await saveCardState({ heroStatusVisible: visible });
+        await successReply(`Hero status display turned ${visible ? "on" : "off"}.`);
+        await logCommand(command, user, `Hero status visibility set to ${visible ? "on" : "off"}`);
         break;
       }
       case "add-admin": {

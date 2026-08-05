@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { Heart, MessageCircle, ExternalLink, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, ExternalLink, Sparkles, Eye } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/SocialBrandIcons";
 import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
 
@@ -59,6 +59,12 @@ export const InstagramCard: React.FC = () => {
   const [postsLoading, setPostsLoading] = useState(true);
 // Core module export or function definition that implements this feature.
   const [postsError, setPostsError] = useState<string | null>(null);
+  const [totalLikes, setTotalLikes] = useState<number | null>(null);
+  const [totalComments, setTotalComments] = useState<number | null>(null);
+  const [totalReach, setTotalReach] = useState<number | null>(null);
+  const [profileReachValue, setProfileReachValue] = useState<number | null>(null);
+  const [profileSince, setProfileSince] = useState<Date | null>(null);
+  const [profileUntil, setProfileUntil] = useState<Date | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,16 +77,15 @@ export const InstagramCard: React.FC = () => {
         setProfileError(null);
         setPostsError(null);
 
-// Core module export or function definition that implements this feature.
+        // Build default date range (last 30 days) and request profile insights
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 30);
+        const qs = `?since=${encodeURIComponent(start.toISOString())}&until=${encodeURIComponent(end.toISOString())}`;
+
         const [profileResponse, postsResponse] = await Promise.all([
-          fetch("/api/instagram", {
-            cache: "no-store",
-            headers: { "ngrok-skip-browser-warning": "true" },
-          }),
-          fetch("/api/instagram/posts", {
-            cache: "no-store",
-            headers: { "ngrok-skip-browser-warning": "true" },
-          }),
+          fetch(`/api/instagram${qs}`, { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } }),
+          fetch("/api/instagram/posts", { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } }),
         ]);
 
         if (!profileResponse.ok) {
@@ -91,14 +96,26 @@ export const InstagramCard: React.FC = () => {
           throw new Error("Unable to load latest Instagram posts.");
         }
 
-// Core module export or function definition that implements this feature.
-        const profileData: InstagramProfileResponse = await profileResponse.json();
-// Core module export or function definition that implements this feature.
+        const profileJson = await profileResponse.json();
+        const profileData: InstagramProfileResponse = {
+          username: profileJson.username || "",
+          followers_count: Number(profileJson.followers_count || 0),
+          follows_count: Number(profileJson.follows_count || 0),
+          media_count: Number(profileJson.media_count || 0),
+          profile_picture_url: profileJson.profile_picture_url || "",
+        };
+
         const postsData = await postsResponse.json();
 
         if (!isMounted) return;
         setInstagramProfile(profileData);
         setFeaturedPosts(Array.isArray(postsData.posts) ? postsData.posts : []);
+        setTotalLikes(typeof postsData.totalLikes === "number" ? postsData.totalLikes : null);
+        setTotalComments(typeof postsData.totalComments === "number" ? postsData.totalComments : null);
+        setTotalReach(typeof postsData.totalReach === "number" ? postsData.totalReach : null);
+        setProfileReachValue(typeof profileJson.profileReach === "number" ? profileJson.profileReach : null);
+        setProfileSince(profileJson.since ? new Date(profileJson.since) : start);
+        setProfileUntil(profileJson.until ? new Date(profileJson.until) : end);
       } catch (error) {
         if (!isMounted) return;
 // Core module export or function definition that implements this feature.
@@ -213,7 +230,17 @@ export const InstagramCard: React.FC = () => {
               <Sparkles size={13} />
               Featured Instagram Visuals
             </span>
-            <span className="text-xs text-white/40">Latest Grid</span>
+            <span className="text-xs text-white/40 flex items-center gap-3">
+              <span>Latest Grid</span>
+              {profileReachValue !== null && profileSince && profileUntil && (
+                <span className="text-xs text-white/50 flex items-center gap-3">
+                  <span className="text-xs text-white/50">{`${profileSince.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${profileUntil.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}</span>
+                  <span className="flex items-center gap-1">
+                    <Eye size={14} className="text-white/60" /> {formatCount(profileReachValue)}
+                  </span>
+                </span>
+              )}
+            </span>
           </div>
 
           {postsLoading ? (
@@ -241,11 +268,11 @@ export const InstagramCard: React.FC = () => {
                     <div className="flex items-center gap-4 text-white font-bold text-sm">
                       <span className="flex items-center gap-1">
                         <Heart size={16} className="text-pink-500 fill-pink-500" />
-                        {formatCount(0)}
+                        {formatCount((post as any).like_count || 0)}
                       </span>
                       <span className="flex items-center gap-1">
                         <MessageCircle size={16} className="text-white" />
-                        {formatCount(0)}
+                        {formatCount((post as any).comments_count || 0)}
                       </span>
                     </div>
                     <p className="text-xs text-white/80 line-clamp-2">{post.caption || "Latest post"}</p>

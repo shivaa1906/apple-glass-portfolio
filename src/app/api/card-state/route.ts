@@ -27,6 +27,7 @@ type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  heroStatusVisible?: boolean;
   botLogChannelId?: string;
   adminUserIds?: string[];
   viewerCounterEnabled?: boolean;
@@ -63,6 +64,7 @@ const DEFAULT_STATE: CardState = {
   viewerCounterEnabled: true,
   heroEmail: "",
   heroStatus: "Available",
+  heroStatusVisible: true,
 };
 
 /**

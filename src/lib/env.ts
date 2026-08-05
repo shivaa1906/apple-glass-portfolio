@@ -9,14 +9,14 @@ const normalizeEnvValue = (value?: string) => {
   return trimmed;
 };
 
-export const getEnv = (key: string, fallback?: string) => {
+export const getEnv = (key: string, fallback: string): string => {
   const value = normalizeEnvValue(process.env[key]);
   return value ?? fallback;
 };
 
-export const getSiteUrl = () => getEnv("NEXT_PUBLIC_SITE_URL", "https://shivaxroy.dev");
+export const getSiteUrl = (): string => getEnv("NEXT_PUBLIC_SITE_URL", "https://shivagopiportfolio.netlify.app");
 
-export const getAnalyticsEndpoint = () => getEnv("NEXT_PUBLIC_ANALYTICS_ENDPOINT", "/analytics/track");
+export const getAnalyticsEndpoint = (): string => getEnv("NEXT_PUBLIC_ANALYTICS_ENDPOINT", "/api/analytics");
 
 export const getAnalyticsBaseUrl = () => {
   const endpoint = getAnalyticsEndpoint().replace(/\/+$/, "");

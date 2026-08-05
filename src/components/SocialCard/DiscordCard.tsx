@@ -19,6 +19,7 @@ type DiscordPresence = {
   status: string;
   customStatus: string;
   activity: string;
+  voiceChannel?: string;
   serverCount: string;
   servers: string[];
   botOnline?: boolean;
@@ -36,10 +37,15 @@ export const DiscordCard: FC = () => {
     displayName: profile.name || "Shiva gopi",
     avatar: profile.avatar || "/assets/profile_avatar1.jpg",
     status: "online",
-    customStatus: profile.details?.customStatus || "Developing Next.js 15 Apple Glass Portfolio 🚀",
+    customStatus:
+      typeof profile.details?.customStatus === "string"
+        ? profile.details.customStatus
+        : "Developing Next.js 15 Apple Glass Portfolio 🚀",
     activity: "Coding in VS Code",
     serverCount: "3",
-    servers: profile.details?.servers || ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
+    servers: Array.isArray(profile.details?.servers)
+      ? profile.details.servers.filter((item): item is string => typeof item === "string")
+      : ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
     botOnline: true,
   });
 
@@ -63,6 +69,7 @@ export const DiscordCard: FC = () => {
         status: data.status || current.status,
         customStatus: data.customStatus || current.customStatus,
         activity: data.activity || current.activity,
+        voiceChannel: data.voiceChannel ?? current.voiceChannel,
         serverCount: data.serverCount && data.serverCount !== "0" ? data.serverCount : current.serverCount,
         servers: Array.isArray(data.servers) && data.servers.length > 0 ? data.servers : current.servers,
         botOnline: data.botOnline ?? current.botOnline,
@@ -162,6 +169,7 @@ export const DiscordCard: FC = () => {
 
 // Core module export or function definition that implements this feature.
   const activityText = presence.activity || (hasMounted && cardState.discordManualActivity) || "Coding in VS Code";
+  const voiceText = presence.voiceChannel ? `Joined in ${presence.voiceChannel}` : "Not in voice chat";
 // Core module export or function definition that implements this feature.
   const inviteUrl = cardState.discordInviteUrl || profile.actionUrl || "https://discord.gg/zjq6VYAX7h";
 // Core module export or function definition that implements this feature.
@@ -173,7 +181,7 @@ export const DiscordCard: FC = () => {
 // Core module export or function definition that implements this feature.
   const customStatus = presence.customStatus || "Developing Next.js 15 Apple Glass Portfolio 🚀";
 // Core module export or function definition that implements this feature.
-  const botOnline = presence.botOnline !== false;
+  const botOnline = presence.status === "online" || presence.botOnline !== false;
 // Core module export or function definition that implements this feature.
   const discordBadgeClasses = botOnline
     ? "discord-loading-glow p-1.5 rounded-full bg-indigo-500/40 text-white border border-indigo-400/40 flex items-center gap-1 text-xs font-semibold px-2.5 shadow-[0_0_22px_rgba(88,101,242,0.35)]"
@@ -227,14 +235,25 @@ export const DiscordCard: FC = () => {
           </a>
         </div>
 
-        <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/10 space-y-2">
-          <div className="flex items-center gap-2 text-xs text-indigo-200 font-semibold uppercase tracking-wide">
-            <Terminal size={14} className="text-emerald-300" />
-            Current Activity
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-indigo-200 font-semibold uppercase tracking-wide">
+              <Terminal size={14} className="text-emerald-300" />
+              Current Activity
+            </div>
+            <p className="text-sm sm:text-base text-white font-extrabold leading-tight break-words whitespace-pre-wrap">
+              {activityText}
+            </p>
           </div>
-          <p className="text-sm sm:text-base text-white font-extrabold leading-tight break-words whitespace-pre-wrap">
-            {activityText}
-          </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-indigo-200 font-semibold uppercase tracking-wide">
+              <Terminal size={14} className="text-emerald-300" />
+              Voice Activity
+            </div>
+            <p className="text-sm sm:text-base text-white font-extrabold leading-tight break-words whitespace-pre-wrap">
+              {voiceText}
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 bg-white/[0.16] sm:bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">

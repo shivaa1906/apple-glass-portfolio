@@ -11,6 +11,7 @@ type FacebookPagePayload = {
   username?: string;
   followers_count: number;
   fan_count: number;
+  posts_count: number;
   picture: string;
   cover?: string;
   link: string;
@@ -24,11 +25,26 @@ export const revalidate = 0;
 // Core module export or function definition that implements this feature.
 const CACHE_PATH = path.join(process.cwd(), "bot", "facebook-page-cache.json");
 
+const normalizeCache = (parsed: Partial<FacebookPagePayload> | null): FacebookPagePayload | null => {
+  if (!parsed) return null;
+  return {
+    name: String(parsed.name || ""),
+    username: typeof parsed.username === "string" && parsed.username.trim() ? parsed.username.trim() : undefined,
+    followers_count: Number(parsed.followers_count ?? 0),
+    fan_count: Number(parsed.fan_count ?? 0),
+    posts_count: Number(parsed.posts_count ?? 0),
+    picture: String(parsed.picture || ""),
+    cover: typeof parsed.cover === "string" && parsed.cover.trim() ? parsed.cover : undefined,
+    link: String(parsed.link || ""),
+  };
+};
+
 const readCache = async (): Promise<FacebookPagePayload | null> => {
   try {
 // Core module export or function definition that implements this feature.
     const raw = await fs.readFile(CACHE_PATH, "utf8");
-    return JSON.parse(raw) as FacebookPagePayload;
+    const parsed = JSON.parse(raw) as Partial<FacebookPagePayload>;
+    return normalizeCache(parsed);
   } catch {
     return null;
   }
@@ -58,7 +74,7 @@ export async function GET() {
 // Core module export or function definition that implements this feature.
   const url = `https://graph.facebook.com/v17.0/${encodeURIComponent(
     pageId
-  )}?fields=name,username,followers_count,fan_count,picture.type(large),cover,link&access_token=${encodeURIComponent(
+  )}?fields=name,username,followers_count,fan_count,posts.limit(1).summary(true),picture.type(large),cover.fields(source),link&access_token=${encodeURIComponent(
     accessToken
   )}`;
 
@@ -83,6 +99,7 @@ export async function GET() {
       username: typeof data.username === "string" && data.username.trim() ? data.username.trim() : undefined,
       followers_count: Number(data.followers_count ?? 0),
       fan_count: Number(data.fan_count ?? 0),
+      posts_count: Number(data.posts?.summary?.total_count ?? 0),
       picture: String(data.picture?.data?.url || ""),
       cover: typeof data.cover?.source === "string" && data.cover.source.trim() ? data.cover.source : undefined,
       link: String(data.link || ""),

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Eye } from "lucide-react";
-import { connectAnalyticsSSE } from "@/lib/analyticsClient";
 import { useCardState } from "@/lib/useCardState";
 
 export const ViewerCounter = () => {
@@ -12,9 +11,7 @@ export const ViewerCounter = () => {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const base = (process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT || "").replace(/\/+$/, "");
-        const url = base ? `${base}/analytics` : "/analytics";
-        const res = await fetch(url);
+        const res = await fetch("/api/analytics");
         if (res.ok) {
           const j = await res.json();
           setCount(j.totalVisitors || j.visitors || 0);
@@ -25,14 +22,6 @@ export const ViewerCounter = () => {
     };
 
     void fetchInitial();
-
-    const off = connectAnalyticsSSE((ev: unknown) => {
-      if (ev?.type === "new-visitor") {
-        setCount((current) => current + 1);
-      }
-    });
-
-    return () => off();
   }, []);
 
   if (cardState.viewerCounterEnabled === false) {

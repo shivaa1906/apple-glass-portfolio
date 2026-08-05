@@ -25,6 +25,7 @@ export type CardState = {
   heroLocation?: string;
   heroEmail?: string;
   heroStatus?: string;
+  heroStatusVisible?: boolean;
   botLogChannelId?: string;
   adminUserIds?: string[];
   viewerCounterEnabled?: boolean;

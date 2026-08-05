@@ -4,6 +4,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { getSiteUrl } from "@/lib/env";
+import { NetworkStatus } from "@/components/NetworkStatus/NetworkStatus";
+import { LoadingScreen } from "@/components/LoadingScreen/LoadingScreen";
 import "./globals.css";
 
 // Core module export or function definition that implements this feature.
@@ -68,6 +70,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full antialiased scroll-smooth">
       <body className={`${inter.className} min-h-full bg-[#050505] text-white overflow-x-hidden`} suppressHydrationWarning>
+        <LoadingScreen />
+        <NetworkStatus />
         {children}
       </body>
     </html>

@@ -262,14 +262,20 @@ export const GitHubCard: React.FC = () => {
     let lastMonth = -1;
     weeks.forEach((week, index) => {
 // Core module export or function definition that implements this feature.
-      const firstDay = week.contributionDays[0];
-      if (!firstDay || !firstDay.date) {
+      const firstMonthDay = week.contributionDays.find((day) => {
+        if (!day?.date) {
+          return false;
+        }
+
+        const parsed = new Date(day.date);
+        return parsed.getMonth() !== lastMonth;
+      });
+
+      if (!firstMonthDay) {
         return;
       }
 
-// Core module export or function definition that implements this feature.
-      const parsed = new Date(firstDay.date);
-// Core module export or function definition that implements this feature.
+      const parsed = new Date(firstMonthDay.date);
       const month = parsed.getMonth();
       if (month !== lastMonth) {
         monthLabels.push({
@@ -393,7 +399,7 @@ export const GitHubCard: React.FC = () => {
               <Sparkles size={13} />
               {contributionCalendar
                 ? `${contributionCalendar.totalContributions.toLocaleString()} contributions in the last year`
-                : githubData?.contributionsCount || profile.details?.contributionsCount}
+                : `${String(githubData?.contributionsCount ?? profile.details?.contributionsCount ?? "0")}`}
             </span>
             <div className="flex items-center gap-1 text-[11px] text-white/40">
               <span>Less</span>

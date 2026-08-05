@@ -8,23 +8,25 @@ import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
 import { Heart, Repeat2, MessageCircle, Bookmark, ExternalLink, Pin } from "lucide-react";
+import { Eye } from "lucide-react";
 import { TwitterIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 import PlatformBadge from "@/components/PlatformBadge/PlatformBadge";
+import TwitterReach from "./TwitterReach";
 
 export const TwitterCard: React.FC = () => {
   const profile = SOCIAL_PROFILES.find((p) => p.id === "twitter")!;
 // Core module export or function definition that implements this feature.
   const cardState = useCardState();
 // Core module export or function definition that implements this feature.
-  const tweetData = profile.details?.pinnedTweet;
+  const tweetData = profile.details?.pinnedTweet as { likes?: number; retweets?: number; replies?: number; date?: string; text?: string } | undefined;
 
 // Core module export or function definition that implements this feature.
-  const [likes, setLikes] = useState(tweetData?.likes || 3420);
+  const [likes, setLikes] = useState(tweetData?.likes ?? 3420);
 // Core module export or function definition that implements this feature.
   const [hasLiked, setHasLiked] = useState(false);
 // Core module export or function definition that implements this feature.
-  const [retweets, setRetweets] = useState(tweetData?.retweets || 890);
+  const [retweets, setRetweets] = useState(tweetData?.retweets ?? 890);
 // Core module export or function definition that implements this feature.
   const [hasRetweeted, setHasRetweeted] = useState(false);
 
@@ -80,15 +82,18 @@ export const TwitterCard: React.FC = () => {
             </div>
           </div>
 
-          <a
-            href={profile.actionUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2 px-6 py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-sky-500/30 hover:scale-105"
-          >
-            <span>{profile.actionLabel}</span>
-            <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
-          </a>
+          <div className="flex flex-col items-end gap-2">
+            <a
+              href={profile.actionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2 px-6 py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-sky-500/30 hover:scale-105"
+            >
+              <span>{profile.actionLabel}</span>
+              <ExternalLink size={15} className="group-hover:translate-x-1 transition-transform" />
+            </a>
+            <TwitterReach />
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10 text-center">
