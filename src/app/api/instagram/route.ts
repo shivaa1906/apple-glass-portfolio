@@ -63,12 +63,21 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-// Core module export or function definition that implements this feature.
       const errorBody = await response.text();
       console.error("Instagram profile Graph API error:", errorBody);
 
+      let errorMessage = "Failed to fetch Instagram profile information.";
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed?.error?.message) {
+          errorMessage = parsed.error.message;
+        }
+      } catch {
+        // ignore parse failures
+      }
+
       return NextResponse.json(
-        { error: "Failed to fetch Instagram profile information." },
+        { error: errorMessage },
         { status: response.status }
       );
     }

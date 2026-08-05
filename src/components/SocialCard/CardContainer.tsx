@@ -47,7 +47,8 @@ export const CardContainer: FC<CardContainerProps> = ({
       window.matchMedia("(hover: none)").matches ||
       window.matchMedia("(pointer: coarse)").matches);
 
-  const [isMobile, setIsMobile] = useState(() => isMobileQuery());
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
 // Core module export or function definition that implements this feature.
   const [rotateX, setRotateX] = useState(0);
@@ -59,6 +60,8 @@ export const CardContainer: FC<CardContainerProps> = ({
   const [mouseY, setMouseY] = useState("50%");
 
   useEffect(() => {
+    setMounted(true);
+    setIsMobile(isMobileQuery());
     const handleResize = () => setIsMobile(isMobileQuery());
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -75,9 +78,10 @@ export const CardContainer: FC<CardContainerProps> = ({
 // Core module export or function definition that implements this feature.
   const opacityValue = useTransform(scrollYProgress, [0, 0.25, 0.5, 0.75, 1], [0.3, 0.85, 1, 0.85, 0.3]);
 // Core module export or function definition that implements this feature.
-  const scale = isMobile ? 1 : scaleValue;
+  const shouldUseMobile = mounted ? isMobile : false;
+  const scale = shouldUseMobile ? 1 : scaleValue;
 // Core module export or function definition that implements this feature.
-  const opacity = isMobile ? 1 : opacityValue;
+  const opacity = shouldUseMobile ? 1 : opacityValue;
 // Core module export or function definition that implements this feature.
   const y = 0;
 

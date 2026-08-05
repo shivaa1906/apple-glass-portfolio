@@ -1,4 +1,6 @@
 import fs from "fs/promises";
+import { constants as fsConstants } from "fs";
+import os from "os";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -40,6 +42,7 @@ type AnalyticsStore = {
 };
 
 const ANALYTICS_PATH = path.join(process.cwd(), "bot", "analytics.json");
+const TMP_ANALYTICS_PATH = path.join(os.tmpdir(), "portfolio_analytics.json");
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const initialSupabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
@@ -63,19 +66,43 @@ const isTableMissingError = (error: any) => {
 
 const getNow = () => new Date().toISOString();
 
-const readAnalyticsLocal = async (): Promise<AnalyticsStore> => {
+const getAnalyticsPath = async (): Promise<string> => {
   try {
-    const raw = await fs.readFile(ANALYTICS_PATH, "utf8");
+    await fs.access(ANALYTICS_PATH, fsConstants.R_OK | fsConstants.W_OK);
+    return ANALYTICS_PATH;
+  } catch {
+    try {
+      await fs.access(path.dirname(ANALYTICS_PATH), fsConstants.R_OK | fsConstants.W_OK);
+      return ANALYTICS_PATH;
+    } catch {
+      return TMP_ANALYTICS_PATH;
+    }
+  }
+};
+
+const readAnalyticsLocal = async (): Promise<AnalyticsStore> => {
+  const analyticsPath = await getAnalyticsPath();
+  try {
+    const raw = await fs.readFile(analyticsPath, "utf8");
     return JSON.parse(raw) as AnalyticsStore;
   } catch {
     const init: AnalyticsStore = { visitors: [], totalVisitors: 0, createdAt: getNow() };
-    await fs.writeFile(ANALYTICS_PATH, JSON.stringify(init, null, 2), "utf8");
+    try {
+      await fs.writeFile(analyticsPath, JSON.stringify(init, null, 2), "utf8");
+    } catch (error) {
+      console.warn("Unable to write analytics local file:", error);
+    }
     return init;
   }
 };
 
 const writeAnalyticsLocal = async (data: AnalyticsStore) => {
-  await fs.writeFile(ANALYTICS_PATH, JSON.stringify(data, null, 2), "utf8");
+  const analyticsPath = await getAnalyticsPath();
+  try {
+    await fs.writeFile(analyticsPath, JSON.stringify(data, null, 2), "utf8");
+  } catch (error) {
+    console.warn("Unable to persist analytics local file:", error);
+  }
 };
 
 const upsertLocalVisitor = async (payload: VisitorPayload): Promise<{ totalVisitors: number; isNew: boolean }> => {

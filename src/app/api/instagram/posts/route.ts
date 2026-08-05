@@ -91,12 +91,21 @@ export async function GET() {
     });
 
     if (!response.ok) {
-// Core module export or function definition that implements this feature.
       const errorBody = await response.text();
       console.error("Instagram media Graph API error:", errorBody);
 
+      let errorMessage = "Failed to fetch latest Instagram posts.";
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed?.error?.message) {
+          errorMessage = parsed.error.message;
+        }
+      } catch {
+        // ignore parse failures
+      }
+
       return NextResponse.json(
-        { error: "Failed to fetch latest Instagram posts." },
+        { error: errorMessage },
         { status: response.status }
       );
     }

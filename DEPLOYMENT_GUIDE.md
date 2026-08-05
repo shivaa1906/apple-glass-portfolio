@@ -22,6 +22,10 @@ Set these on your deployment platform:
   DISCORD_PRESENCE_URL=https://your-bot-server.ngrok.io/presence
   FRONTEND_URL=https://shivagopiportfolio.netlify.app
   FRONTEND_UPDATE_SECRET=replace_with_a_random_secret
+  FACEBOOK_PAGE_ID=your_page_id_here
+  FACEBOOK_ACCESS_TOKEN=your_page_access_token_here
+  INSTAGRAM_BUSINESS_ID=your_instagram_business_id_here
+  INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token_here
   ```
 
 **Netlify:**
@@ -32,7 +36,9 @@ Set these on your deployment platform:
 
 ### 3. **API Route Verification**
 - [ ] Test `/api/card-state` on deployed site
-- [ ] Should return JSON with `heroLocation` and `heroEmail`
+- [ ] Test `/api/facebook/page` and `/api/facebook/posts`
+- [ ] Test `/api/instagram` and `/api/instagram/posts`
+- [ ] Should return JSON with no `error` message
 
 ---
 

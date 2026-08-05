@@ -183,9 +183,13 @@ export const FacebookCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const displayHandle = facebookProfile?.username ? ensureHandle(facebookProfile.username) : profile.handle;
 // Core module export or function definition that implements this feature.
-  const followersValue = facebookProfile?.followers_count != null ? displayFollowers : resolveStatValue(profile.stats[0].value);
-  const likesValue = facebookProfile?.fan_count != null ? displayLikes : resolveStatValue(profile.stats[1].value);
-  const postsCount = facebookProfile?.posts_count != null ? String(facebookProfile.posts_count) : Array.isArray(facebookPosts) ? String(facebookPosts.length) : resolveStatValue(profile.stats[2].value);
+  const followersValue = facebookProfile ? displayFollowers : resolveStatValue(profile.stats[0].value);
+  const likesValue = facebookProfile ? displayLikes : resolveStatValue(profile.stats[1].value);
+  const postsCount = facebookProfile?.posts_count && facebookProfile.posts_count > 0
+    ? String(facebookProfile.posts_count)
+    : Array.isArray(facebookPosts)
+    ? String(facebookPosts.length)
+    : resolveStatValue(profile.stats[2].value);
 
   // If there are live posts from the API, prefer the latest post as the featured announcement.
   const latest = Array.isArray(facebookPosts) && facebookPosts.length ? facebookPosts[0] : null;

@@ -89,11 +89,21 @@ export const InstagramCard: React.FC = () => {
         ]);
 
         if (!profileResponse.ok) {
-          throw new Error("Unable to load Instagram profile information.");
+          const profileError = await profileResponse.json().catch(() => null);
+          throw new Error(
+            profileError?.error
+              ? `Instagram profile error: ${profileError.error}`
+              : "Unable to load Instagram profile information."
+          );
         }
 
         if (!postsResponse.ok) {
-          throw new Error("Unable to load latest Instagram posts.");
+          const postsError = await postsResponse.json().catch(() => null);
+          throw new Error(
+            postsError?.error
+              ? `Instagram posts error: ${postsError.error}`
+              : "Unable to load latest Instagram posts."
+          );
         }
 
         const profileJson = await profileResponse.json();

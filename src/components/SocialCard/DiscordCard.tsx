@@ -7,7 +7,7 @@ import { type FC, useEffect, useState } from "react";
 import Image from "next/image";
 import { SOCIAL_PROFILES } from "@/data/socialData";
 import { CardContainer } from "./CardContainer";
-import { Copy, ShieldCheck, Terminal } from "lucide-react";
+import { Copy, ShieldCheck, Terminal, ExternalLink } from "lucide-react";
 import { DiscordIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
 
@@ -240,8 +240,8 @@ export const DiscordCard: FC = () => {
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:scale-105 active:scale-95"
           >
-            <Copy size={16} />
             <span>Join Discord</span>
+            <ExternalLink size={16} className="group-hover:translate-x-1 transition-transform" />
           </a>
         </div>
 

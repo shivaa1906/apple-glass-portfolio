@@ -51,7 +51,7 @@ export const ResumeModal: FC<ResumeModalProps> = ({ isOpen, onClose }) => {
         </div>
         <div>
           <h3 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            Alex Rivera — Curriculum Vitae
+            Shiva Gopi — Curriculum Vitae
             <Sparkles size={18} className="text-blue-400 animate-pulse" />
           </h3>
           <p className="text-sm text-white/60">Principal Spatial UI Architect & Principal Engineer</p>

@@ -97,9 +97,9 @@ export async function GET() {
     const payload: FacebookPagePayload = {
       name: String(data.name || ""),
       username: typeof data.username === "string" && data.username.trim() ? data.username.trim() : undefined,
-      followers_count: Number(data.followers_count ?? 0),
-      fan_count: Number(data.fan_count ?? 0),
-      posts_count: Number(data.posts?.summary?.total_count ?? 0),
+      followers_count: Number(data.followers_count ?? data.fan_count ?? 0),
+      fan_count: Number(data.fan_count ?? data.followers_count ?? 0),
+      posts_count: Number(data.posts?.summary?.total_count ?? data.posts_count ?? 0),
       picture: String(data.picture?.data?.url || ""),
       cover: typeof data.cover?.source === "string" && data.cover.source.trim() ? data.cover.source : undefined,
       link: String(data.link || ""),
