@@ -59,13 +59,25 @@ export const useVisitorAnalytics = () => {
     try {
       const vid = await ensureVisitor();
       const body = { visitorId: vid, ...payload };
-      await fetch(ENDPOINT, {
+      const response = await fetch(ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const result = await response.json().catch(() => null);
+      if (result && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("visitor-count-updated", {
+            detail: {
+              totalVisitors: result.totalVisitors,
+              isNew: result.isNew,
+            },
+          })
+        );
+      }
+      return result;
     } catch {
-      // ignore
+      return null;
     }
   };
 

@@ -23,7 +23,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // Core module export or function definition that implements this feature.
-const CACHE_PATH = path.join(process.cwd(), "bot", "facebook-page-cache.json");
+const CACHE_CANDIDATES = [
+  path.join(process.cwd(), "bot", "facebook-page-cache.json"),
+  path.join(process.cwd(), "../bot", "facebook-page-cache.json"),
+  path.join(process.cwd(), "..", "bot", "facebook-page-cache.json"),
+];
+
+const CACHE_PATH = CACHE_CANDIDATES[0];
 
 const normalizeCache = (parsed: Partial<FacebookPagePayload> | null): FacebookPagePayload | null => {
   if (!parsed) return null;
@@ -40,22 +46,41 @@ const normalizeCache = (parsed: Partial<FacebookPagePayload> | null): FacebookPa
 };
 
 const readCache = async (): Promise<FacebookPagePayload | null> => {
-  try {
-// Core module export or function definition that implements this feature.
-    const raw = await fs.readFile(CACHE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Partial<FacebookPagePayload>;
-    return normalizeCache(parsed);
-  } catch {
-    return null;
+  for (const candidate of CACHE_CANDIDATES) {
+    try {
+      const raw = await fs.readFile(candidate, "utf8");
+      const parsed = JSON.parse(raw) as Partial<FacebookPagePayload>;
+      return normalizeCache(parsed);
+    } catch {
+      // try next candidate
+    }
   }
+  return null;
 };
 
 const writeCache = async (payload: FacebookPagePayload) => {
-  try {
-    await fs.writeFile(CACHE_PATH, JSON.stringify(payload, null, 2), "utf8");
-  } catch {
-    // Ignore cache write failures, but still return fresh data.
+  // Merge with existing cache to avoid overwriting good counts with temporary zeros
+  const existing = await readCache();
+  const merged: FacebookPagePayload = {
+    name: payload.name || existing?.name || "",
+    username: payload.username ?? existing?.username,
+    followers_count: (payload.followers_count || payload.fan_count) || existing?.followers_count || 0,
+    fan_count: (payload.fan_count || payload.followers_count) || existing?.fan_count || 0,
+    posts_count: payload.posts_count || existing?.posts_count || 0,
+    picture: payload.picture || existing?.picture || "",
+    cover: payload.cover || existing?.cover,
+    link: payload.link || existing?.link || "",
+  };
+
+  for (const candidate of CACHE_CANDIDATES) {
+    try {
+      await fs.writeFile(candidate, JSON.stringify(merged, null, 2), "utf8");
+      return;
+    } catch {
+      // try next candidate
+    }
   }
+  // ignore if none writable
 };
 
 export async function GET() {
@@ -118,6 +143,22 @@ export async function GET() {
       cover: typeof data.cover?.source === "string" && data.cover.source.trim() ? data.cover.source : undefined,
       link: String(data.link || ""),
     };
+
+    // If posts_count is missing/zero, try requesting posts summary separately (some tokens return it differently)
+    if (!payload.posts_count) {
+      try {
+        const postsUrl = `https://graph.facebook.com/v17.0/${encodeURIComponent(pageId)}/posts?limit=1&summary=true&access_token=${encodeURIComponent(accessToken)}`;
+        const postsResp = await fetch(postsUrl, { cache: "no-store", headers: { Accept: "application/json" } });
+        if (postsResp.ok) {
+          const postsData = await postsResp.json();
+          if (!postsData?.error) {
+            payload.posts_count = Number(postsData?.summary?.total_count ?? postsData?.data?.length ?? payload.posts_count ?? 0);
+          }
+        }
+      } catch {
+        // ignore posts re-check failures
+      }
+    }
 
     await writeCache(payload);
 

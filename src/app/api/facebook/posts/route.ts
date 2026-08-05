@@ -13,22 +13,34 @@ type FacebookPost = {
   shares?: { count?: number };
 };
 
-const CACHE_PATH = path.join(process.cwd(), "bot", "facebook-posts-cache.json");
+const CACHE_CANDIDATES = [
+  path.join(process.cwd(), "bot", "facebook-posts-cache.json"),
+  path.join(process.cwd(), "../bot", "facebook-posts-cache.json"),
+  path.join(process.cwd(), "..", "bot", "facebook-posts-cache.json"),
+];
+
+const CACHE_PATH = CACHE_CANDIDATES[0];
 
 const readCache = async (): Promise<FacebookPost[] | null> => {
-  try {
-    const raw = await fs.readFile(CACHE_PATH, "utf8");
-    return JSON.parse(raw) as FacebookPost[];
-  } catch {
-    return null;
+  for (const candidate of CACHE_CANDIDATES) {
+    try {
+      const raw = await fs.readFile(candidate, "utf8");
+      return JSON.parse(raw) as FacebookPost[];
+    } catch {
+      // continue
+    }
   }
+  return null;
 };
 
 const writeCache = async (payload: FacebookPost[]) => {
-  try {
-    await fs.writeFile(CACHE_PATH, JSON.stringify(payload, null, 2), "utf8");
-  } catch {
-    // ignore
+  for (const candidate of CACHE_CANDIDATES) {
+    try {
+      await fs.writeFile(candidate, JSON.stringify(payload, null, 2), "utf8");
+      return;
+    } catch {
+      // try next
+    }
   }
 };
 

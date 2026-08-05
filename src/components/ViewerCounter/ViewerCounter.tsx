@@ -26,7 +26,17 @@ export const ViewerCounter = () => {
   }, []);
 
   useEffect(() => {
-    // subscribe to realtime analytics events and increment count on new visitors
+    const onVisitorUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ totalVisitors?: number; isNew?: boolean }>;
+      const { totalVisitors, isNew } = customEvent.detail || {};
+      if (typeof totalVisitors === "number") {
+        setCount(totalVisitors);
+      } else if (isNew) {
+        setCount((current) => current + 1);
+      }
+    };
+
+    window.addEventListener("visitor-count-updated", onVisitorUpdated);
     const close = connectRealtime((msg) => {
       try {
         if (msg && msg.type === "analytics" && msg.data?.type === "new-visitor") {
@@ -37,7 +47,10 @@ export const ViewerCounter = () => {
       }
     });
 
-    return () => { close(); };
+    return () => {
+      window.removeEventListener("visitor-count-updated", onVisitorUpdated);
+      close();
+    };
   }, []);
 
   if (cardState.viewerCounterEnabled === false) {
