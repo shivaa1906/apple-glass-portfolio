@@ -24,33 +24,53 @@ type DiscordPresencePayload = {
 
 // Core module export or function definition that implements this feature.
 const defaultResponse: DiscordPresencePayload = {
-  username: "Unknown#0000",
-  displayName: "Discord User",
-  avatar: "/assets/profile_avatar1.jpg",
+  username: process.env.DISCORD_USERNAME || "root_roy#0",
+  displayName: process.env.DISCORD_DISPLAY_NAME || "Shiva",
+  avatar: process.env.DISCORD_AVATAR || "/assets/profile_avatar1.jpg",
   status: "offline",
   customStatus: "",
   activity: "",
   voiceChannel: undefined,
   serverCount: "0",
-  servers: [],
+  servers: ["Spatial Engineers Hub", "Framer Motion Guild", "Vercel Developers"],
   botOnline: false,
 };
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresencePayloadInput = DiscordPresencePayload & { avatarUrl?: string };
 
-const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPresencePayload => ({
-  username: parsed.username || defaultResponse.username,
-  displayName: parsed.displayName || defaultResponse.displayName,
-  avatar: parsed.avatar || parsed.avatarUrl || defaultResponse.avatar,
-  status: parsed.status || defaultResponse.status,
-  customStatus: parsed.customStatus || defaultResponse.customStatus,
-  activity: parsed.activity || defaultResponse.activity,
-  voiceChannel: parsed.voiceChannel || defaultResponse.voiceChannel,
-  serverCount: parsed.serverCount || defaultResponse.serverCount,
-  servers: Array.isArray(parsed.servers) ? parsed.servers : defaultResponse.servers,
-  botOnline: typeof parsed.botOnline === "boolean" ? parsed.botOnline : parsed.status !== "offline",
-});
+const isPlaceholderPresence = (parsed: Partial<DiscordPresencePayloadInput>) => {
+  const usernamePlaceholder = parsed.username === "Unknown#0000" || parsed.username === "Discord User";
+  const displayNamePlaceholder = parsed.displayName === "Discord User" || parsed.displayName === "Unknown#0000";
+  const avatarPlaceholder = parsed.avatar === "/assets/profile_avatar1.jpg" && !parsed.avatarUrl;
+
+  return usernamePlaceholder && displayNamePlaceholder && avatarPlaceholder;
+};
+
+const normalizeState = (parsed: Partial<DiscordPresencePayloadInput>): DiscordPresencePayload => {
+  if (isPlaceholderPresence(parsed)) {
+    return defaultResponse;
+  }
+
+  return {
+    username:
+      parsed.username && parsed.username !== "Unknown#0000" && parsed.username !== "Discord User"
+        ? parsed.username
+        : defaultResponse.username,
+    displayName:
+      parsed.displayName && parsed.displayName !== "Discord User" && parsed.displayName !== "Unknown#0000"
+        ? parsed.displayName
+        : defaultResponse.displayName,
+    avatar: parsed.avatar || parsed.avatarUrl || defaultResponse.avatar,
+    status: parsed.status || defaultResponse.status,
+    customStatus: parsed.customStatus || defaultResponse.customStatus,
+    activity: parsed.activity || defaultResponse.activity,
+    voiceChannel: parsed.voiceChannel || defaultResponse.voiceChannel,
+    serverCount: parsed.serverCount || defaultResponse.serverCount,
+    servers: Array.isArray(parsed.servers) && parsed.servers.length > 0 ? parsed.servers : defaultResponse.servers,
+    botOnline: typeof parsed.botOnline === "boolean" ? parsed.botOnline : parsed.status !== "offline",
+  };
+};
 
 const readCachedPresence = async (): Promise<DiscordPresencePayload> => {
   try {

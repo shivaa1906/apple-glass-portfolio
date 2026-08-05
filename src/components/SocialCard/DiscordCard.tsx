@@ -59,8 +59,18 @@ export const DiscordCard: FC = () => {
     let eventSource: EventSource | null = null;
     let intervalId: number | null = null;
 
+    const isFallbackPresence = (data: DiscordPresence) => {
+      return (
+        data.username === "Unknown#0000" &&
+        data.displayName === "Discord User" &&
+        data.avatar === "/assets/profile_avatar1.jpg"
+      );
+    };
+
     const updatePresence = (data: DiscordPresence) => {
       if (!isSubscribed) return;
+      if (isFallbackPresence(data)) return;
+
       setPresence((current) => ({
         ...current,
         username: data.username || current.username,
