@@ -69,11 +69,14 @@ const formatCount = (value: number) => {
   return new Intl.NumberFormat("en-US").format(value);
 };
 
+const parseGithubContributionDate = (value: string) => {
+  return new Date(`${value}T00:00:00Z`);
+};
+
 const formatCalendarDate = (value: string) => {
   if (!value) return "unknown date";
 
-// Core module export or function definition that implements this feature.
-  const parsed = new Date(value);
+  const parsed = parseGithubContributionDate(value);
   if (!Number.isFinite(parsed.getTime())) {
     return value;
   }
@@ -82,6 +85,7 @@ const formatCalendarDate = (value: string) => {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   }).format(parsed);
 };
 
@@ -228,7 +232,7 @@ export const GitHubCard: React.FC = () => {
     const createEmptyDay = (index: number) => {
 // Core module export or function definition that implements this feature.
       const date = new Date();
-      date.setDate(date.getDate() - (364 - index));
+      date.setUTCDate(date.getUTCDate() - (364 - index));
 
       return {
         id: `empty-${index}`,
@@ -267,7 +271,7 @@ export const GitHubCard: React.FC = () => {
           return false;
         }
 
-        const parsed = new Date(day.date);
+const parsed = parseGithubContributionDate(day.date);
         return parsed.getMonth() !== lastMonth;
       });
 
@@ -275,8 +279,8 @@ export const GitHubCard: React.FC = () => {
         return;
       }
 
-      const parsed = new Date(firstMonthDay.date);
-      const month = parsed.getMonth();
+      const parsed = parseGithubContributionDate(firstMonthDay.date);
+      const month = parsed.getUTCMonth();
       if (month !== lastMonth) {
         monthLabels.push({
           label: new Intl.DateTimeFormat("en-US", { month: "short" }).format(parsed),
