@@ -145,6 +145,12 @@ const writeAnalytics = async (data: AnalyticsStore) => {
 };
 
 import crypto from "crypto";
+import crypto from "crypto";
+import { WebSocketServer } from "ws";
+// SSE connections for live updates
+const sseClients: http.ServerResponse[] = [];
+// WebSocket clients for realtime updates (bot server)
+const wsClients: Set<any> = new Set();
 
 const hashIp = (ip?: string) => {
   if (!ip) return undefined;
@@ -162,7 +168,12 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
 
   const now = new Date().toISOString();
   const ipHash = hashIp(payload.ip);
-  const existing = analytics.visitors.find((v) => v.visitorId === vid || (ipHash && v.ipHash === ipHash));
+  let existing = null as VisitorRecord | null;
+  if (vid) {
+    existing = analytics.visitors.find((v) => v.visitorId === vid) || null;
+  } else if (ipHash) {
+    existing = analytics.visitors.find((v) => v.ipHash === ipHash) || null;
+  }
   let isNew = false;
   if (existing) {
     existing.lastVisit = now;
@@ -208,6 +219,31 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
   }
 
   await writeAnalytics(analytics);
+  await writeAnalytics(analytics);
+
+  // notify SSE clients
+  const msg = JSON.stringify({ type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now });
+  sseClients.forEach((res) => {
+    try {
+      res.write(`event: analytics\n`);
+      res.write(`data: ${msg}\n\n`);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  // notify WS clients
+  try {
+    const payload = { type: "analytics", data: { type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now } };
+    const str = JSON.stringify(payload);
+    wsClients.forEach((ws) => {
+      try {
+        ws.send(str);
+      } catch (e) {
+        // ignore
+      }
+    });
+  } catch {}
 
   // notify SSE clients
   const msg = JSON.stringify({ type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now });
@@ -250,6 +286,82 @@ const DEFAULT_CARD_STATE: CardState = {
   heroStatusVisible: true,
 };
 
+// Log channels mapping persisted per guild
+const LOG_CHANNELS_PATH = path.join(process.cwd(), "bot", "log-channels.json");
+type LogChannelMap = Record<string, Record<string, string>>; // guildId -> { key: channelId }
+
+const readLogChannels = async (): Promise<LogChannelMap> => {
+  try {
+    const raw = await fs.readFile(LOG_CHANNELS_PATH, "utf8");
+    return JSON.parse(raw) as LogChannelMap;
+  } catch {
+    await fs.writeFile(LOG_CHANNELS_PATH, JSON.stringify({}, null, 2), "utf8");
+    return {};
+  }
+};
+
+const writeLogChannels = async (data: LogChannelMap) => {
+  await fs.writeFile(LOG_CHANNELS_PATH, JSON.stringify(data, null, 2), "utf8");
+};
+
+const ensureLogChannelsForGuild = async (guild: import("discord.js").Guild) => {
+  const names = [
+    "command-logs",
+    "analytics-logs",
+    "presence-logs",
+    "card-state-logs",
+    "ping-logs",
+    "pin-logs",
+    "auto-role-logs",
+    "purge-logs",
+  ];
+
+  const existingCategory = guild.channels.cache.find((c) => c.type === 4 && c.name === (process.env.LOGS_CATEGORY_NAME || "Portfolio Logs")) as import("discord.js").CategoryChannel | undefined;
+  const category = existingCategory || (await guild.channels.create({ name: process.env.LOGS_CATEGORY_NAME || "Portfolio Logs", type: 4 }).catch(() => null));
+  const mapping: Record<string, string> = {};
+  for (const n of names) {
+    let ch = guild.channels.cache.find((c) => c.parentId === category?.id && c.name === n && c.isTextBased()) as import("discord.js").TextChannel | undefined;
+    if (!ch) {
+      ch = await guild.channels.create({ name: n, type: 0, parent: category?.id }).catch(() => null) as import("discord.js").TextChannel | undefined;
+    }
+    if (ch) mapping[n] = ch.id;
+  }
+
+  const all = await readLogChannels();
+  all[guild.id] = mapping;
+  await writeLogChannels(all);
+  return mapping;
+};
+
+const removeLogChannelsForGuild = async (guild: import("discord.js").Guild) => {
+  const all = await readLogChannels();
+  const mapping = all[guild.id] || {};
+  for (const id of Object.values(mapping)) {
+    try { const ch = await guild.channels.fetch(id).catch(() => null); if (ch) await ch.delete().catch(() => null); } catch {}
+  }
+  // remove mapping
+  delete all[guild.id];
+  await writeLogChannels(all);
+};
+
+const postToLog = async (guildId: string | null | undefined, key: string, content: string) => {
+  if (!guildId) return;
+  const all = await readLogChannels();
+  const mapping = all[guildId] || {};
+  const chId = mapping[`${key}-logs`] || mapping[`${key}`] || mapping[key];
+  if (!chId) return;
+  try {
+    for (const g of client.guilds.cache.values()) {
+      if (g.id === guildId) {
+        const ch = await g.channels.fetch(chId).catch(() => null);
+        if (ch && ch.isTextBased()) {
+          await ch.send(content).catch(() => null);
+        }
+      }
+    }
+  } catch {}
+};
+
 const readJsonFile = async <T>(filePath: string, fallback: T): Promise<T> => {
   try {
     const raw = await fs.readFile(filePath, "utf8");
@@ -266,6 +378,14 @@ const writeJsonFile = async (filePath: string, data: unknown) => {
 
 const savePresence = async (payload: DiscordProfileState) => {
   await writeJsonFile(CACHE_PATH, payload);
+  // broadcast presence to WS clients
+  try {
+    const payloadMsg = { type: "presence", data: payload };
+    const str = JSON.stringify(payloadMsg);
+    wsClients.forEach((ws) => {
+      try { ws.send(str); } catch (e) { /* ignore */ }
+    });
+  } catch {}
 };
 
 const readCardState = async (): Promise<CardState> => {
@@ -319,12 +439,37 @@ const writeCardState = async (state: CardState) => {
     // don't block on remote sync failures
     console.error("Failed to sync card state to frontend:", err);
   }
+  // broadcast card state to WS clients so frontends can update in realtime
+  try {
+    const payload = { type: "card-state", data: state };
+    const str = JSON.stringify(payload);
+    wsClients.forEach((ws) => {
+      try { ws.send(str); } catch (e) { /* ignore */ }
+    });
+  } catch {}
 };
 
 const appendCommandLog = async (entry: CommandLogEntry) => {
   const existing = await readJsonFile<CommandLogEntry[]>(LOG_PATH, []);
   existing.push(entry);
   await writeJsonFile(LOG_PATH, existing);
+};
+
+// Auto-role persistence
+const AUTO_ROLES_PATH = path.join(process.cwd(), "bot", "auto-roles.json");
+type AutoRolesMap = Record<string, string[]>; // guildId -> roleIds
+const readAutoRoles = async (): Promise<AutoRolesMap> => {
+  try {
+    const raw = await fs.readFile(AUTO_ROLES_PATH, "utf8");
+    return JSON.parse(raw) as AutoRolesMap;
+  } catch {
+    await fs.writeFile(AUTO_ROLES_PATH, JSON.stringify({}, null, 2), "utf8");
+    return {};
+  }
+};
+
+const writeAutoRoles = async (data: AutoRolesMap) => {
+  await fs.writeFile(AUTO_ROLES_PATH, JSON.stringify(data, null, 2), "utf8");
 };
 
 const sendServerLog = async (content: string, opts?: { title?: string }) => {
@@ -721,6 +866,46 @@ const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
     name: "visitor-stats",
     description: "Show visitor analytics stats.",
   },
+  {
+    name: "logs",
+    description: "Create or remove per-type log channels in this guild.",
+    options: [
+      {
+        name: "state",
+        type: 3,
+        description: "on or off",
+        required: true,
+        choices: [
+          { name: "on", value: "on" },
+          { name: "off", value: "off" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "purge",
+    description: "Delete a number of messages from this channel.",
+    options: [
+      { name: "count", type: 4, description: "Number of messages to delete (max 100)", required: true },
+    ],
+  },
+  {
+    name: "auto-role",
+    description: "Manage automatic role assignment for new members.",
+    options: [
+      { name: "action", type: 3, description: "add or remove", required: true, choices: [{ name: "add", value: "add" }, { name: "remove", value: "remove" }] },
+      { name: "roleid", type: 3, description: "Role ID to add/remove", required: true },
+    ],
+  },
+  {
+    name: "ping",
+    description: "Show recent pings and register pings related to site/bot.",
+  },
+  {
+    name: "pin",
+    description: "Pin a message by link.",
+    options: [ { name: "link", type: 3, description: "Message link to pin", required: true } ],
+  },
 ];
 
 const client = new Client({
@@ -1032,6 +1217,37 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   await updateDiscordState(user, member, presence, voiceChannelOverride);
 });
 
+// Watch messages for pings related to the bot or site, and route them to ping-logs
+client.on("messageCreate", async (message) => {
+  try {
+    if (!message.guild) return;
+    if (message.author?.bot) return;
+    const content = message.content || "";
+    const isMention = message.mentions.has(client.user!);
+    const siteUrl = normalizeEnv(process.env.FRONTEND_URL) || normalizeEnv(process.env.NEXT_PUBLIC_SITE_URL) || "";
+    const isSite = siteUrl && content.includes(siteUrl);
+    if (isMention || isSite) {
+      const summary = `Ping by ${message.author.tag} in <#${message.channelId}>: ${content.slice(0, 800)}`;
+      await postToLog(message.guild.id, "ping", summary);
+    }
+  } catch {
+    // ignore
+  }
+});
+
+// Auto-role assignment on member join
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const auto = await readAutoRoles();
+    const roles = auto[member.guild.id] || [];
+    if (!roles.length) return;
+    for (const r of roles) {
+      try { const role = await member.guild.roles.fetch(r).catch(() => null); if (role) await member.roles.add(role).catch(() => null); } catch {}
+    }
+    await postToLog(member.guild.id, "auto-role", `Assigned auto-roles to ${member.user.tag}: ${roles.join(",")}`);
+  } catch {}
+});
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -1211,6 +1427,105 @@ client.on("interactionCreate", async (interaction) => {
         await successReply(`Discord server link updated.`);
         await logCommand(command, user, `Discord link updated to ${link}`);
         break;
+      case "logs": {
+        const stateValue = interaction.options.getString("state", true);
+        const enabled = stateValue === "on";
+        if (!interaction.guild) {
+          await failReply("This command must be used in a guild.");
+          break;
+        }
+        if (enabled) {
+          await ensureLogChannelsForGuild(interaction.guild);
+          await successReply("Log channels created/enabled in this guild.");
+          await logCommand(command, user, `Enabled logs in guild ${interaction.guild.id}`);
+        } else {
+          await removeLogChannelsForGuild(interaction.guild);
+          await successReply("Log channels removed/disabled in this guild.");
+          await logCommand(command, user, `Disabled logs in guild ${interaction.guild.id}`);
+        }
+        break;
+      }
+      case "purge": {
+        if (!interaction.guild || !interaction.channel) {
+          await failReply("This command must be used in a guild channel.");
+          break;
+        }
+        const count = interaction.options.getInteger("count", true);
+        if (count <= 0 || count > 100) {
+          await failReply("Count must be between 1 and 100.");
+          break;
+        }
+        try {
+          const ch = interaction.channel as import("discord.js").TextChannel;
+          const deleted = await ch.bulkDelete(count, true);
+          await successReply(`Deleted ${deleted.size} messages.`);
+          await postToLog(interaction.guild.id, "purge", `Purged ${deleted.size} messages in <#${ch.id}> by ${user}`);
+          await logCommand(command, user, `Purged ${deleted.size} messages in channel ${ch.id}`);
+        } catch (err) {
+          await failReply("Failed to purge messages. Ensure I have Manage Messages permission and messages are recent (<14 days).");
+        }
+        break;
+      }
+      case "auto-role": {
+        if (!interaction.guild) { await failReply("Use this in a guild."); break; }
+        const action = interaction.options.getString("action", true);
+        const roleId = interaction.options.getString("roleid", true);
+        const auto = await readAutoRoles();
+        const list = auto[interaction.guild.id] || [];
+        if (action === "add") {
+          if (!list.includes(roleId)) list.push(roleId);
+          auto[interaction.guild.id] = list;
+          await writeAutoRoles(auto);
+          await successReply(`Role ${roleId} will be assigned to new members.`);
+          await postToLog(interaction.guild.id, "auto-role", `Added auto-role ${roleId}`);
+          await logCommand(command, user, `Added auto-role ${roleId}`);
+        } else {
+          const idx = list.indexOf(roleId);
+          if (idx >= 0) list.splice(idx, 1);
+          auto[interaction.guild.id] = list;
+          await writeAutoRoles(auto);
+          await successReply(`Role ${roleId} removed from auto-assign list.`);
+          await postToLog(interaction.guild.id, "auto-role", `Removed auto-role ${roleId}`);
+          await logCommand(command, user, `Removed auto-role ${roleId}`);
+        }
+        break;
+      }
+      case "ping": {
+        // reply with recent ping summary (read last 25 entries of command log for simplicity)
+        try {
+          const raw = await fs.readFile(LOG_PATH, "utf8");
+          const logs = JSON.parse(raw) as CommandLogEntry[];
+          const recent = logs.slice(-25).map((l) => `\u2022 [${l.timestamp}] ${l.user}: ${l.command}`).join("\n");
+          await successReply({ content: `Recent logs:\n${recent}` });
+          await postToLog(interaction.guildId, "ping", `Ping requested by ${user}`);
+          await logCommand(command, user, `Requested ping logs`);
+        } catch {
+          await failReply("Unable to read logs.");
+        }
+        break;
+      }
+      case "pin": {
+        if (!interaction.guild) { await failReply("Use in a guild channel."); break; }
+        const link = interaction.options.getString("link", true).trim();
+        // expect format https://discord.com/channels/<guildId>/<channelId>/<messageId>
+        const parts = link.split("/").slice(-3);
+        if (parts.length !== 3) { await failReply("Invalid message link."); break; }
+        const [gId, cId, mId] = parts;
+        try {
+          const guild = await client.guilds.fetch(gId);
+          const ch = await guild.channels.fetch(cId) as import("discord.js").TextChannel | null;
+          if (!ch || !ch.isTextBased()) { await failReply("Channel not found or not a text channel."); break; }
+          const msg = await ch.messages.fetch(mId).catch(() => null);
+          if (!msg) { await failReply("Message not found."); break; }
+          await msg.pin();
+          await successReply("Message pinned.");
+          await postToLog(interaction.guildId, "pin", `Pinned message ${link} by ${user}`);
+          await logCommand(command, user, `Pinned message ${link}`);
+        } catch (err) {
+          await failReply("Failed to pin message.");
+        }
+        break;
+      }
       }
       case "set-community-announcement": {
         const text = interaction.options.getString("text", true).trim();
@@ -1593,6 +1908,30 @@ const server = http.createServer(async (req, res) => {
   // default not found
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
+});
+
+// Attach a WebSocket server that reuses the same HTTP server (noServer mode)
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on("connection", (socket, req) => {
+  wsClients.add(socket);
+  socket.on("close", () => {
+    wsClients.delete(socket);
+  });
+  socket.on("message", () => {
+    // currently read-only server: ignore client messages (could add auth/subscribe later)
+  });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  // Accept upgrades to /ws only
+  if ((req.url || "").startsWith("/ws")) {
+    wss.handleUpgrade(req, socket, head, (wsSocket) => {
+      wss.emit("connection", wsSocket, req);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 const tryListen = (startPort: number, attempts = 5) => {

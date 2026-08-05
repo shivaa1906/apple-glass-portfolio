@@ -10,6 +10,7 @@ import { CardContainer } from "./CardContainer";
 import { Copy, ShieldCheck, Terminal, ExternalLink } from "lucide-react";
 import { DiscordIcon } from "@/components/Icons/SocialBrandIcons";
 import { useCardState } from "@/lib/useCardState";
+import { connectRealtime } from "@/lib/realtime";
 
 // Type definition used to describe the structure of data in this component.
 type DiscordPresence = {
@@ -104,17 +105,35 @@ export const DiscordCard: FC = () => {
     };
 
     const initEventSource = () => {
-      if (typeof window === "undefined" || typeof EventSource === "undefined") {
-        return null;
+      if (typeof window === "undefined") return null;
+
+      // Prefer WebSocket realtime channel when available
+      if (typeof WebSocket !== "undefined") {
+        try {
+          const closeWs = connectRealtime((msg) => {
+            try {
+              if (msg && msg.type === "presence") {
+                updatePresence(msg.data as DiscordPresence);
+              }
+            } catch {
+              // ignore
+            }
+          });
+
+          // return an object with close method to match EventSource cleanup pattern
+          return { close: () => closeWs() } as unknown as EventSource;
+        } catch {
+          // fall through to SSE
+        }
       }
 
+      if (typeof EventSource === "undefined") return null;
+
       try {
-// Core module export or function definition that implements this feature.
         const source = new EventSource("/api/discord?stream=1");
 
         source.onmessage = (event) => {
           try {
-// Core module export or function definition that implements this feature.
             const data = JSON.parse(event.data) as DiscordPresence;
             updatePresence(data);
           } catch {

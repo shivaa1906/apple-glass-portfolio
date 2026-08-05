@@ -50,8 +50,26 @@ export async function GET() {
 
   try {
     const resp = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
-    if (!resp.ok) throw new Error(`Facebook posts API ${resp.status}`);
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      let message = `Facebook posts API ${resp.status}`;
+      try {
+        const parsed = JSON.parse(errorText);
+        if (parsed?.error?.message) {
+          message = parsed.error.message;
+        }
+      } catch {
+        if (errorText) {
+          message = `${message}: ${errorText}`;
+        }
+      }
+      throw new Error(message);
+    }
     const data = await resp.json();
+    if (data?.error) {
+      const message = typeof data.error?.message === "string" ? data.error.message : "Facebook posts API returned an error.";
+      throw new Error(message);
+    }
     const posts = (data.data || []).map((p: { id: string; message?: string; created_time?: string; permalink_url?: string; shares?: { summary?: { total_count?: number } } }) => ({
       id: p.id,
       message: p.message,

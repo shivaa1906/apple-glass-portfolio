@@ -49,6 +49,7 @@ export const FacebookCard: React.FC = () => {
 // Core module export or function definition that implements this feature.
   const [facebookProfile, setFacebookProfile] = useState<FacebookProfileResponse | null>(null);
   const [facebookPosts, setFacebookPosts] = useState<FacebookPost[] | null>(null);
+  const [facebookError, setFacebookError] = useState<string | null>(null);
   const [displayFollowers, setDisplayFollowers] = useState(() => resolveStatValue(profile.stats[0].value));
   const [displayLikes, setDisplayLikes] = useState(() => resolveStatValue(profile.stats[1].value));
   const followerAnimationRef = useRef<number | null>(null);
@@ -97,14 +98,20 @@ export const FacebookCard: React.FC = () => {
         headers: { "ngrok-skip-browser-warning": "true" },
       });
       if (!response.ok) {
-        throw new Error("Unable to load Facebook page data.");
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.error || "Unable to load Facebook page data.";
+        throw new Error(message);
       }
 
-// Core module export or function definition that implements this feature.
       const data = await response.json();
+      if (data?.error) {
+        throw new Error(data.error);
+      }
       setFacebookProfile(data);
-    } catch {
-      // Keep the existing card state if the fetch fails.
+      setFacebookError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load Facebook page data.";
+      setFacebookError(message);
     }
   };
 
@@ -193,6 +200,7 @@ export const FacebookCard: React.FC = () => {
 
   // If there are live posts from the API, prefer the latest post as the featured announcement.
   const latest = Array.isArray(facebookPosts) && facebookPosts.length ? facebookPosts[0] : null;
+  const showError = facebookError && facebookError.length > 0;
   const featuredPostDetails = profile.details?.featuredPost as Record<string, unknown> | undefined;
   const featuredPost = latest
     ? {
@@ -253,6 +261,9 @@ export const FacebookCard: React.FC = () => {
                 />
               </div>
               <p className="text-sm font-medium text-blue-400">{displayHandle}</p>
+              {showError ? (
+                <p className="text-[11px] text-rose-300 mt-2">Facebook profile error: {facebookError}</p>
+              ) : null}
             </div>
           </div>
 

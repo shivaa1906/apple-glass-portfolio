@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { connectRealtime } from "@/lib/realtime";
 import { Eye } from "lucide-react";
 import { useCardState } from "@/lib/useCardState";
 
@@ -22,6 +23,21 @@ export const ViewerCounter = () => {
     };
 
     void fetchInitial();
+  }, []);
+
+  useEffect(() => {
+    // subscribe to realtime analytics events and increment count on new visitors
+    const close = connectRealtime((msg) => {
+      try {
+        if (msg && msg.type === "analytics" && msg.data?.type === "new-visitor") {
+          setCount((c) => c + 1);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    return () => { close(); };
   }, []);
 
   if (cardState.viewerCounterEnabled === false) {

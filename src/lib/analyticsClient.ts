@@ -24,6 +24,7 @@ export type TrackPayload = {
 };
 
 import { getAnalyticsEndpoint } from "./env";
+import { connectRealtime } from "./realtime";
 
 const ENDPOINT = getAnalyticsEndpoint().replace(/\/+$/, "");
 
@@ -79,6 +80,17 @@ export const useVisitorAnalytics = () => {
   return { track, trackButton, trackDownload, ensureVisitor };
 };
 
-export const connectAnalyticsSSE = (_onEvent: (ev: unknown) => void) => {
-  return () => {};
+export const connectAnalyticsSSE = (onEvent: (ev: unknown) => void) => {
+  // Prefer WebSocket realtime channel when available
+  const close = connectRealtime((msg) => {
+    try {
+      if (msg && msg.type === "analytics") {
+        onEvent(msg.data);
+      }
+    } catch {
+      // ignore
+    }
+  });
+
+  return close;
 };

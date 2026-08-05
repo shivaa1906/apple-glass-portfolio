@@ -88,12 +88,26 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      throw new Error(`Facebook Graph API returned ${response.status}`);
+      const errorText = await response.text();
+      let message = `Facebook Graph API returned ${response.status}`;
+      try {
+        const parsed = JSON.parse(errorText);
+        if (parsed?.error?.message) {
+          message = parsed.error.message;
+        }
+      } catch {
+        if (errorText) {
+          message = `${message}: ${errorText}`;
+        }
+      }
+      throw new Error(message);
     }
 
-// Core module export or function definition that implements this feature.
     const data = await response.json();
-// Core module export or function definition that implements this feature.
+    if (data?.error) {
+      const message = typeof data.error?.message === "string" ? data.error.message : "Facebook Graph API returned an error.";
+      throw new Error(message);
+    }
     const payload: FacebookPagePayload = {
       name: String(data.name || ""),
       username: typeof data.username === "string" && data.username.trim() ? data.username.trim() : undefined,
@@ -112,8 +126,7 @@ export async function GET() {
         "Cache-Control": "no-store",
       },
     });
-  } catch {
-// Core module export or function definition that implements this feature.
+  } catch (error) {
     const cached = await readCache();
     if (cached) {
       return NextResponse.json(cached, {
@@ -123,9 +136,11 @@ export async function GET() {
       });
     }
 
+    const message = error instanceof Error ? error.message : "Unable to load Facebook page data.";
+    console.error("Facebook page route error:", message);
     return NextResponse.json(
       {
-        error: "Unable to load Facebook page data.",
+        error: message,
       },
       { status: 500 }
     );
