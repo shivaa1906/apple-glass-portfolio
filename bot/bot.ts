@@ -290,11 +290,18 @@ const writeCardState = async (state: CardState) => {
   // If a frontend URL is provided, attempt to PATCH the remote card-state
   // so a separately deployed frontend can reflect bot-driven updates.
   try {
-    const frontend = normalizeEnv(process.env.FRONTEND_URL);
-    if (frontend) {
+    const frontend = normalizeEnv(process.env.FRONTEND_URL) || normalizeEnv(process.env.NEXT_PUBLIC_SITE_URL);
+    const secret = normalizeEnv(process.env.FRONTEND_UPDATE_SECRET);
+
+    if (!frontend) {
+      console.warn("FRONTEND_URL / NEXT_PUBLIC_SITE_URL not configured. Remote frontend sync skipped.");
+    } else {
+      if (!secret) {
+        console.warn("FRONTEND_UPDATE_SECRET not configured. If the frontend enforces a secret, remote sync will fail.");
+      }
+
       const url = `${frontend.replace(/\/+$/,'')}/api/card-state`;
       const headers: Record<string,string> = { "Content-Type": "application/json" };
-      const secret = normalizeEnv(process.env.FRONTEND_UPDATE_SECRET);
       if (secret) headers["x-update-secret"] = secret;
 
       const resp = await fetch(url, {
