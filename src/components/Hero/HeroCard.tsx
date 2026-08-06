@@ -124,7 +124,7 @@ export const HeroCard: FC<HeroCardProps> = ({ initialHeroLocation, initialHeroEm
 
   // Use server-rendered initial values as primary, only update if API provides different values
   // This prevents the flash when page loads
-  const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available;
+  const statusLabel = cardState.heroStatus || HERO_DATA.status || "Available";
   const statusVisible = cardState.heroStatusVisible !== false;
   const normalizedStatus = statusLabel.trim().toLowerCase();
   const isUnavailable = normalizedStatus === "unavailable";
