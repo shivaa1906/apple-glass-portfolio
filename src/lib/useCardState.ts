@@ -55,7 +55,7 @@ const DEFAULT_CARD_STATE: CardState = {
   adminUserIds: [],
   viewerCounterEnabled: true,
   heroEmail: "",
-  heroStatus: "Available",
+  heroStatus: "",
   heroStatusVisible: true,
 };
 
@@ -78,9 +78,11 @@ const readPersistedCardState = (): CardState => {
 
 export const useCardState = () => {
 // Core module export or function definition that implements this feature.
-  const [cardState, setCardState] = useState<CardState>(() => DEFAULT_CARD_STATE);
+  const [cardState, setCardState] = useState<CardState>(DEFAULT_CARD_STATE);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setHydrated(true);
     let mounted = true;
 
     const loadState = async () => {
@@ -88,16 +90,25 @@ export const useCardState = () => {
         const response = await fetch("/api/card-state", {
           headers: { "ngrok-skip-browser-warning": "true" },
         });
-        if (!response.ok) return;
+
+        if (!response.ok) {
+          const persisted = readPersistedCardState();
+          if (mounted) {
+            setCardState((current) => ({ ...current, ...persisted }));
+          }
+          return;
+        }
+
         const data = (await response.json()) as CardState;
         if (!mounted) return;
         const publicData = sanitizeCardState(data);
-        
-        // Smart merge: only update with non-empty values from API
-        // This prevents empty strings from overwriting good defaults
+
+        // Use the server response as the authoritative source of truth.
+        // This ensures bot updates for hero location, email, status, and other fields
+        // are immediately reflected in the portfolio instead of being overwritten by stale
+        // session storage values.
         const cleanedData: Partial<CardState> = {};
         for (const [key, value] of Object.entries(publicData || {})) {
-          // Only include non-empty values from API
           if (value !== "" && value !== null && value !== undefined) {
             const typedKey = key as keyof CardState;
             if (typeof value === "string" || typeof value === "boolean" || Array.isArray(value)) {
@@ -105,8 +116,7 @@ export const useCardState = () => {
             }
           }
         }
-        
-        // apply server-provided data first
+
         setCardState((current) => {
           const next = { ...current, ...cleanedData };
           try {
@@ -114,25 +124,22 @@ export const useCardState = () => {
           } catch {}
           return next;
         });
-
-        // then merge persisted client overrides, but do NOT override server `heroEmail`
-        try {
-          const raw = window.sessionStorage.getItem("portfolio-card-state");
-          if (raw) {
-            const parsed = JSON.parse(raw) as CardState;
-            // prevent stored email from temporarily overriding server state
-            if (parsed && typeof parsed === "object") {
-              delete (parsed as Record<string, unknown>).heroEmail;
-              setCardState((c) => ({ ...c, ...sanitizeCardState(parsed as CardState) }));
-            }
-          }
-        } catch {}
       } catch {
-        // ignore fetch errors
+        const persisted = readPersistedCardState();
+        if (mounted) {
+          setCardState((current) => ({ ...current, ...persisted }));
+        }
       }
     };
 
     void loadState();
+
+    if (mounted) {
+      const persisted = readPersistedCardState();
+      if (Object.keys(persisted).length > 0) {
+        setCardState((current) => ({ ...current, ...persisted }));
+      }
+    }
 
     // subscribe to realtime card-state updates
     const close = connectRealtime((msg: RealtimeMessage) => {
@@ -155,13 +162,13 @@ export const useCardState = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!hydrated || typeof window === "undefined") return;
     try {
       window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(sanitizeCardState(cardState)));
     } catch {
       // ignore storage errors
     }
-  }, [cardState]);
+  }, [cardState, hydrated]);
 
   return cardState;
 };

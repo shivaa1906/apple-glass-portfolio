@@ -43,6 +43,7 @@ type CardState = {
   botLogsEnabled?: boolean;
   discordInviteUrl?: string;
   discordSyncEnabled?: boolean;
+  prefix?: string;
   discordManualActivity?: string;
   twitterFollowers?: string;
   twitterFollowing?: string;
@@ -273,6 +274,7 @@ const DEFAULT_CARD_STATE: CardState = {
   heroLocation: "KPHB, Hyderabad, Telangana",
   botLogChannelId: "",
   adminUserIds: [],
+  prefix: "!",
   heroEmail: "shivaa1906@gmail.com",
   heroStatus: "Available",
   heroStatusVisible: true,
@@ -382,6 +384,12 @@ const savePresence = async (payload: DiscordProfileState) => {
 
 const readCardState = async (): Promise<CardState> => {
   return await readJsonFile<CardState>(STATE_PATH, DEFAULT_CARD_STATE);
+};
+
+const isAdminUser = async (userId: string) => {
+  const currentState = await readCardState();
+  const adminIds = currentState.adminUserIds || [];
+  return userId === USER_ID || adminIds.includes(userId);
 };
 
 const writeCardState = async (state: CardState) => {
@@ -1264,7 +1272,37 @@ client.on("messageCreate", async (message) => {
   try {
     if (!message.guild) return;
     if (message.author?.bot) return;
+
     const content = message.content || "";
+    const trimmed = content.trim();
+    const currentState = await readCardState();
+    const prefix = currentState.prefix || "!";
+
+    const isPrefixCommand = trimmed === `${prefix}prefix` || trimmed === "/prefix" || trimmed.startsWith(`${prefix}prefix `) || trimmed.startsWith("/prefix ");
+    if (isPrefixCommand) {
+      const isAdmin = await isAdminUser(message.author.id);
+      if (!isAdmin) {
+        await message.reply("Only admins can view or change the bot prefix.");
+        return;
+      }
+
+      const argText = trimmed.startsWith(`${prefix}prefix`) ? trimmed.slice(`${prefix}prefix`.length).trim() : trimmed.slice("/prefix".length).trim();
+      if (!argText) {
+        await message.reply(`Current bot prefix: \`${prefix}\``);
+        return;
+      }
+
+      const nextPrefix = argText.replace(/^['"]|['"]$/g, "").trim();
+      if (!nextPrefix || nextPrefix.length > 5) {
+        await message.reply("Prefix must be 1-5 characters.");
+        return;
+      }
+
+      await saveCardState({ prefix: nextPrefix });
+      await message.reply(`Bot prefix updated to \`${nextPrefix}\`.`);
+      return;
+    }
+
     const isMention = message.mentions.has(client.user!);
     const siteUrl = normalizeEnv(process.env.FRONTEND_URL) || normalizeEnv(process.env.NEXT_PUBLIC_SITE_URL) || "";
     const isSite = siteUrl && content.includes(siteUrl);

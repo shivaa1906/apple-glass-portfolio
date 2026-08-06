@@ -24,7 +24,7 @@ export const HERO_DATA = {
   shortBio: "Building cinematic glass interfaces, spatial computing experiences, and high-performance WebGL web applications.",
   location: "",
   email: "",
-  status: "Available for Select Advisory & Keynotes",
+  status: "",
   avatar: "/assets/profile_avatar1.jpg",
   resumeUrl: "#resume",
 };
