@@ -4,7 +4,7 @@
 // Description: Custom hook to load shared card state from the API.
 
 import { useEffect, useState } from "react";
-import { connectRealtime } from "./realtime";
+import { connectRealtime, type RealtimeMessage } from "./realtime";
 
 export type CardState = {
   editableWebhookUrl?: string;
@@ -135,11 +135,12 @@ export const useCardState = () => {
     void loadState();
 
     // subscribe to realtime card-state updates
-    const close = connectRealtime((msg) => {
+    const close = connectRealtime((msg: RealtimeMessage) => {
       try {
-        if (msg && msg.type === "card-state" && msg.data) {
+        if (msg.type === "card-state" && msg.data) {
+          const data = msg.data as Record<string, unknown>;
           setCardState((current) => {
-            const next = { ...current, ...(msg.data || {}) };
+            const next = { ...current, ...data };
             try { window.sessionStorage.setItem("portfolio-card-state", JSON.stringify(next)); } catch {}
             return next;
           });

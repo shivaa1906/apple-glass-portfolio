@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { connectRealtime } from "@/lib/realtime";
+import { connectRealtime, type RealtimeMessage } from "@/lib/realtime";
 import { Eye } from "lucide-react";
 import { useCardState } from "@/lib/useCardState";
+import { getStoredVisitorCount, setStoredVisitorCount } from "@/lib/visitorCountStore";
 
 export const ViewerCounter = () => {
   const [count, setCount] = useState<number>(0);
@@ -12,10 +13,17 @@ export const ViewerCounter = () => {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const res = await fetch("/api/analytics");
+        const storedCount = getStoredVisitorCount();
+        if (storedCount > 0) {
+          setCount(storedCount);
+        }
+        
+        const res = await fetch("/api/analytics", { cache: "no-store" });
         if (res.ok) {
           const j = await res.json();
-          setCount(j.totalVisitors || j.visitors || 0);
+          const nextCount = Number(j.totalVisitors ?? j.visitors ?? 0);
+          setCount(Number.isFinite(nextCount) ? nextCount : 0);
+          setStoredVisitorCount(Number.isFinite(nextCount) ? nextCount : 0);
         }
       } catch {
         // ignore fetch failures
@@ -31,16 +39,26 @@ export const ViewerCounter = () => {
       const { totalVisitors, isNew } = customEvent.detail || {};
       if (typeof totalVisitors === "number") {
         setCount(totalVisitors);
+        setStoredVisitorCount(totalVisitors);
       } else if (isNew) {
-        setCount((current) => current + 1);
+        setCount((current) => {
+          const next = current + 1;
+          setStoredVisitorCount(next);
+          return next;
+        });
       }
     };
 
     window.addEventListener("visitor-count-updated", onVisitorUpdated);
-    const close = connectRealtime((msg) => {
+    const close = connectRealtime((msg: RealtimeMessage) => {
       try {
-        if (msg && msg.type === "analytics" && msg.data?.type === "new-visitor") {
-          setCount((c) => c + 1);
+        if (msg.type === "analytics") {
+          const data = msg.data as Record<string, unknown> | null | undefined;
+          const nextCount = Number(data?.totalVisitors ?? data?.count ?? 0);
+          if (Number.isFinite(nextCount) && nextCount >= 0) {
+            setCount(nextCount);
+            setStoredVisitorCount(nextCount);
+          }
         }
       } catch {
         // ignore

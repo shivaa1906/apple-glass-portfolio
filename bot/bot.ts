@@ -229,7 +229,15 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
 
   // notify WS clients
   try {
-    const payload = { type: "analytics", data: { type: isNew ? "new-visitor" : "visit", visitorId: vid, timestamp: now } };
+    const payload = {
+      type: "analytics",
+      data: {
+        type: isNew ? "new-visitor" : "visit",
+        visitorId: vid,
+        timestamp: now,
+        totalVisitors: analytics.totalVisitors,
+      },
+    };
     const str = JSON.stringify(payload);
     wsClients.forEach((ws) => {
       try {

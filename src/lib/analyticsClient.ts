@@ -24,7 +24,8 @@ export type TrackPayload = {
 };
 
 import { getAnalyticsEndpoint } from "./env";
-import { connectRealtime } from "./realtime";
+import { connectRealtime, type RealtimeMessage } from "./realtime";
+import { setStoredVisitorCount } from "./visitorCountStore";
 
 const ENDPOINT = getAnalyticsEndpoint().replace(/\/+$/, "");
 
@@ -66,10 +67,14 @@ export const useVisitorAnalytics = () => {
       });
       const result = await response.json().catch(() => null);
       if (result && typeof window !== "undefined") {
+        const totalVisitors = typeof result.totalVisitors === "number" ? result.totalVisitors : null;
+        if (typeof totalVisitors === "number") {
+          setStoredVisitorCount(totalVisitors);
+        }
         window.dispatchEvent(
           new CustomEvent("visitor-count-updated", {
             detail: {
-              totalVisitors: result.totalVisitors,
+              totalVisitors,
               isNew: result.isNew,
             },
           })
@@ -94,9 +99,9 @@ export const useVisitorAnalytics = () => {
 
 export const connectAnalyticsSSE = (onEvent: (ev: unknown) => void) => {
   // Prefer WebSocket realtime channel when available
-  const close = connectRealtime((msg) => {
+  const close = connectRealtime((msg: RealtimeMessage) => {
     try {
-      if (msg && msg.type === "analytics") {
+      if (msg.type === "analytics") {
         onEvent(msg.data);
       }
     } catch {

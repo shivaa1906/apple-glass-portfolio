@@ -41,12 +41,20 @@ type AnalyticsStore = {
   createdAt: string;
 };
 
+type SupabaseVisitorRecord = {
+  visitor_id: string;
+  first_visit: string;
+  last_visit: string;
+  visit_count?: number;
+  data?: Partial<VisitorPayload>;
+};
+
 const ANALYTICS_PATH = path.join(process.cwd(), "bot", "analytics.json");
 const TMP_ANALYTICS_PATH = path.join(os.tmpdir(), "portfolio_analytics.json");
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const initialSupabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-let supabase = initialSupabase;
+const supabase = initialSupabase;
 let supabaseEnabled = Boolean(initialSupabase);
 const VISITOR_TABLE = "portfolio_visitors";
 
@@ -59,7 +67,7 @@ const disableSupabase = (reason?: string) => {
   }
 };
 
-const isTableMissingError = (error: any) => {
+const isTableMissingError = (error: { message?: string } | null | undefined) => {
   const message = String(error?.message || "").toLowerCase();
   return /portfolio_visitors|relation .* does not exist|schema cache/i.test(message);
 };
@@ -149,7 +157,7 @@ const readAnalyticsSupabase = async (): Promise<AnalyticsStore | null> => {
     return null;
   }
 
-  const visitors = (data || []).map((record: any) => ({
+  const visitors = (data || []).map((record: SupabaseVisitorRecord) => ({
     visitorId: record.visitor_id,
     firstVisit: record.first_visit,
     lastVisit: record.last_visit,
@@ -238,6 +246,7 @@ export async function GET() {
       totalVisitors: analytics.totalVisitors,
       visitors: analytics.visitors.length,
       createdAt: analytics.createdAt,
+      source: "database",
     },
     {
       headers: {
@@ -260,6 +269,7 @@ export async function POST(request: Request) {
         visitorId,
         totalVisitors: result.totalVisitors,
         isNew: result.isNew,
+        source: "database",
       },
       {
         headers: {

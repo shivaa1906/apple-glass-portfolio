@@ -18,6 +18,8 @@ export const getSiteUrl = (): string => getEnv("NEXT_PUBLIC_SITE_URL", "https://
 
 export const getAnalyticsEndpoint = (): string => getEnv("NEXT_PUBLIC_ANALYTICS_ENDPOINT", "/api/analytics");
 
+export const getRealtimeEndpoint = (): string => getEnv("NEXT_PUBLIC_REALTIME_ENDPOINT", "/ws");
+
 export const getAnalyticsBaseUrl = () => {
   const endpoint = getAnalyticsEndpoint().replace(/\/+$/, "");
   return endpoint || undefined;
