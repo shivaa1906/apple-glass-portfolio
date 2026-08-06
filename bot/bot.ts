@@ -1145,18 +1145,15 @@ client.once("ready", async () => {
   }
 
   try {
+    await client.application?.commands.set(commands);
+    console.log("Slash commands registered globally.");
+
     if (GUILD_ID) {
-      const guild = await client.guilds.fetch(GUILD_ID);
+      const guild = await client.guilds.fetch(GUILD_ID).catch(() => null);
       if (guild) {
         await guild.commands.set(commands);
-        console.log(`Slash commands registered to guild ${GUILD_ID}.`);
-      } else {
-        await client.application?.commands.set(commands);
-        console.log("Slash commands registered globally (guild fetch failed).");
+        console.log(`Slash commands also registered to guild ${GUILD_ID}.`);
       }
-    } else {
-      await client.application?.commands.set(commands);
-      console.log("Slash commands registered globally.");
     }
   } catch (error) {
     console.error("Failed to register slash commands:", error);
