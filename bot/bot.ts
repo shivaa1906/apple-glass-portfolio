@@ -126,6 +126,28 @@ const CACHE_PATH = path.join(process.cwd(), "bot", "discord-presence-cache.json"
 const STATE_PATH = path.join(process.cwd(), "bot", "card-state.json");
 const LOG_PATH = path.join(process.cwd(), "bot", "command-logs.json");
 const ANALYTICS_PATH = path.join(process.cwd(), "bot", "analytics.json");
+const BOT_STATUS_PATH = path.join(process.cwd(), "bot", "bot-status.json");
+
+type BotStatusTarget = {
+  userId: string;
+  channelId: string;
+  guildId: string;
+  lastStatus: string | null;
+};
+
+const readBotStatusTargets = async (): Promise<BotStatusTarget[]> => {
+  try {
+    const raw = await fs.readFile(BOT_STATUS_PATH, "utf8");
+    return JSON.parse(raw) as BotStatusTarget[];
+  } catch {
+    await fs.writeFile(BOT_STATUS_PATH, "[]", "utf8");
+    return [];
+  }
+};
+
+const writeBotStatusTargets = async (data: BotStatusTarget[]) => {
+  await fs.writeFile(BOT_STATUS_PATH, JSON.stringify(data, null, 2), "utf8");
+};
 
 const readAnalytics = async (): Promise<AnalyticsStore> => {
   try {
@@ -573,6 +595,34 @@ const logCommand = async (command: string, user: string, details: string) => {
 };
 
 const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
+  {
+    name: "bot-status",
+    description: "Track when a bot or user comes online.",
+    options: [
+      {
+        name: "target",
+        type: 6,
+        description: "The bot or user to track",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "bot-status-remove",
+    description: "Stop tracking a bot or user.",
+    options: [
+      {
+        name: "target",
+        type: 6,
+        description: "The bot or user to stop tracking",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "reset-bot-status",
+    description: "Stop tracking all bots and users.",
+  },
   {
     name: "edit-webhook",
     description: "Update the editable webhook URL for logs.",
@@ -1193,7 +1243,44 @@ const updateDiscordState = async (
 };
 
 client.on("presenceUpdate", async (_oldPresence, newPresence) => {
-  if (!newPresence?.user?.id || newPresence.user.id !== USER_ID) {
+  if (!newPresence?.user?.id) {
+    return;
+  }
+
+  const targetId = newPresence.user.id;
+  try {
+    const targets = await readBotStatusTargets();
+    const targetIndex = targets.findIndex(t => t.userId === targetId);
+    
+    if (targetIndex !== -1) {
+      const target = targets[targetIndex];
+      const currentStatus = newPresence.status;
+      
+      const isOnlineNow = currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd";
+      const wasOffline = target.lastStatus === "offline" || !target.lastStatus;
+
+      if (isOnlineNow && wasOffline) {
+        const channel = await client.channels.fetch(target.channelId).catch(() => null);
+        if (channel && channel.isTextBased()) {
+          const embed = new EmbedBuilder()
+            .setTitle("✅ Success")
+            .setDescription(`**<@${targetId}>** is now **ONLINE**`)
+            .setColor(0x57F287);
+          await (channel as import("discord.js").TextChannel).send({ embeds: [embed] }).catch(() => null);
+        }
+      }
+
+      const newLastStatus = isOnlineNow ? "online" : "offline";
+      if (target.lastStatus !== newLastStatus) {
+        targets[targetIndex].lastStatus = newLastStatus;
+        await writeBotStatusTargets(targets);
+      }
+    }
+  } catch (error) {
+    console.error("Error processing bot status tracking:", error);
+  }
+
+  if (targetId !== USER_ID) {
     return;
   }
 
@@ -1434,6 +1521,69 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     switch (command) {
+      case "bot-status": {
+        const target = interaction.options.getUser("target", true);
+        const channelId = interaction.channelId;
+        const guildId = interaction.guildId;
+        
+        if (!channelId || !guildId) {
+          await failReply("This command must be used in a server channel.");
+          break;
+        }
+
+        const targets = await readBotStatusTargets();
+        const existingIndex = targets.findIndex(t => t.userId === target.id);
+        
+        if (existingIndex !== -1) {
+          targets[existingIndex].channelId = channelId;
+          targets[existingIndex].guildId = guildId;
+        } else {
+          targets.push({ userId: target.id, channelId, guildId, lastStatus: "offline" });
+        }
+        await writeBotStatusTargets(targets);
+
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Success")
+          .setDescription(`Tracking <@${target.id}>. Will notify when they come online.`)
+          .setColor(0x57F287);
+
+        await successReply({ embeds: [embed] });
+        await logCommand(command, user, `Started tracking status for ${target.tag}`);
+        break;
+      }
+      case "bot-status-remove": {
+        const target = interaction.options.getUser("target", true);
+        const targets = await readBotStatusTargets();
+        const newTargets = targets.filter(t => t.userId !== target.id);
+        
+        if (newTargets.length === targets.length) {
+          await failReply(`<@${target.id}> is not currently being tracked.`);
+          break;
+        }
+
+        await writeBotStatusTargets(newTargets);
+        
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Success")
+          .setDescription(`Stopped tracking <@${target.id}>.`)
+          .setColor(0x57F287);
+
+        await successReply({ embeds: [embed] });
+        await logCommand(command, user, `Stopped tracking status for ${target.tag}`);
+        break;
+      }
+      case "reset-bot-status": {
+        await writeBotStatusTargets([]);
+        
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Success")
+          .setDescription(`Reset all bot status trackers.`)
+          .setColor(0x57F287);
+
+        await successReply({ embeds: [embed] });
+        await logCommand(command, user, `Reset all bot status trackers`);
+        break;
+      }
       case "edit-webhook": {
         const url = interaction.options.getString("url", true).trim();
         await saveCardState({ editableWebhookUrl: url });
