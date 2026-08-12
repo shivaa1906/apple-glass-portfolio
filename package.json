@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "bot": "tsx bot/bot.ts"
+    "bot": "tsx bot/bot.ts",
+    "bot:sync": "tsx bot/sync-commands.ts"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.19.12",

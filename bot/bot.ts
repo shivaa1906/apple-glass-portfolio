@@ -7,13 +7,13 @@ import {
   GatewayIntentBits,
   ActivityType,
   Activity,
-  RESTPostAPIApplicationCommandsJSONBody,
   type PresenceStatus,
   ChannelType,
   EmbedBuilder,
   type TextChannel,
 } from "discord.js";
 import { SupabaseCardState } from "./supabaseClient";
+import { commands } from "./commands";
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 dotenv.config({ path: path.join(process.cwd(), ".env.local") });
@@ -269,7 +269,7 @@ const upsertVisitor = async (payload: Partial<VisitorRecord> & { ip?: string }) 
         // ignore
       }
     });
-  } catch {}
+  } catch { }
 
   return { visitorId: vid, isNew };
 };
@@ -353,7 +353,7 @@ const removeLogChannelsForGuild = async (guild: import("discord.js").Guild) => {
   const all = await readLogChannels();
   const mapping = all[guild.id] || {};
   for (const id of Object.values(mapping)) {
-    try { const ch = await guild.channels.fetch(id).catch(() => null); if (ch) await ch.delete().catch(() => null); } catch {}
+    try { const ch = await guild.channels.fetch(id).catch(() => null); if (ch) await ch.delete().catch(() => null); } catch { }
   }
   // remove mapping
   delete all[guild.id];
@@ -375,7 +375,7 @@ const postToLog = async (guildId: string | null | undefined, key: string, conten
         }
       }
     }
-  } catch {}
+  } catch { }
 };
 
 const readJsonFile = async <T>(filePath: string, fallback: T): Promise<T> => {
@@ -401,7 +401,7 @@ const savePresence = async (payload: DiscordProfileState) => {
     wsClients.forEach((ws) => {
       try { ws.send(str); } catch (e) { /* ignore */ }
     });
-  } catch {}
+  } catch { }
 };
 
 const readCardState = async (): Promise<CardState> => {
@@ -442,8 +442,8 @@ const writeCardState = async (state: CardState) => {
         console.warn("FRONTEND_UPDATE_SECRET not configured. If the frontend enforces a secret, remote sync will fail.");
       }
 
-      const url = `${frontend.replace(/\/+$/,'')}/api/card-state`;
-      const headers: Record<string,string> = { "Content-Type": "application/json" };
+      const url = `${frontend.replace(/\/+$/, '')}/api/card-state`;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (secret) headers["x-update-secret"] = secret;
 
       const resp = await fetch(url, {
@@ -468,7 +468,7 @@ const writeCardState = async (state: CardState) => {
     wsClients.forEach((ws) => {
       try { ws.send(str); } catch (e) { /* ignore */ }
     });
-  } catch {}
+  } catch { }
 };
 
 const appendCommandLog = async (entry: CommandLogEntry) => {
@@ -594,408 +594,6 @@ const logCommand = async (command: string, user: string, details: string) => {
   await sendServerLog(`**${entry.command}** executed by **${entry.user}**\n\n${entry.details}`, { title: "Slash Command Executed" });
 };
 
-const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
-  {
-    name: "bot-status",
-    description: "Track when a bot or user comes online.",
-    options: [
-      {
-        name: "target",
-        type: 6,
-        description: "The bot or user to track",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "bot-status-remove",
-    description: "Stop tracking a bot or user.",
-    options: [
-      {
-        name: "target",
-        type: 6,
-        description: "The bot or user to stop tracking",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "reset-bot-status",
-    description: "Stop tracking all bots and users.",
-  },
-  {
-    name: "edit-webhook",
-    description: "Update the editable webhook URL for logs.",
-    options: [
-      {
-        name: "url",
-        type: 3,
-        description: "The webhook URL to use for editable logs.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "xfollowers-set",
-    description: "Set the Twitter followers count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New followers count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "xfollowing-set",
-    description: "Set the Twitter following count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New following count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "xtweets-set",
-    description: "Set the Twitter tweets count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New tweets count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-twitter-followers",
-    description: "Set the Twitter followers count (alias).",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New followers count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-twitter-following",
-    description: "Set the Twitter following count (alias).",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New following count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-twitter-tweets",
-    description: "Set the Twitter tweets count (alias).",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "New tweets count.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-current-activity",
-    description: "Update the Discord activity text.",
-    options: [
-      {
-        name: "text",
-        type: 3,
-        description: "Activity text to display when sync is off.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "sync",
-    description: "Turn Discord activity syncing on or off.",
-    options: [
-      {
-        name: "state",
-        type: 3,
-        description: "Sync state",
-        required: true,
-        choices: [
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "change-server-link",
-    description: "Update the Discord invite link.",
-    options: [
-      {
-        name: "link",
-        type: 3,
-        description: "New invite or server link.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-community-announcement",
-    description: "Set the Facebook community announcement text and date.",
-    options: [
-      {
-        name: "text",
-        type: 3,
-        description: "Announcement text.",
-        required: true,
-      },
-      {
-        name: "date",
-        type: 3,
-        description: "Announcement date.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-connections",
-    description: "Set LinkedIn connections count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "Number of connections.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-followers",
-    description: "Set LinkedIn followers count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "Number of followers.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-recommendations",
-    description: "Set LinkedIn recommendations count.",
-    options: [
-      {
-        name: "count",
-        type: 3,
-        description: "Number of recommendations.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "edit-headline",
-    description: "Edit the LinkedIn headline.",
-    options: [
-      {
-        name: "text",
-        type: 3,
-        description: "Updated headline text.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "edit-headline-bio",
-    description: "Edit the LinkedIn headline bio.",
-    options: [
-      {
-        name: "text",
-        type: 3,
-        description: "Updated headline bio text.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-location",
-    description: "Set the hero profile location.",
-    options: [
-      {
-        name: "text",
-        type: 3,
-        description: "New location text.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "avalable",
-    description: "Set the hero status to Available.",
-  },
-  {
-    name: "unavalable",
-    description: "Set the hero status to Unavailable.",
-  },
-  {
-    name: "status",
-    description: "Show or hide the hero status badge.",
-    options: [
-      {
-        name: "state",
-        type: 3,
-        description: "on or off",
-        required: true,
-        choices: [
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "add-admin",
-    description: "Grant another user permission to run bot commands (developer only).",
-    options: [
-      {
-        name: "userid",
-        type: 3,
-        description: "Discord user id to grant admin access",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "set-email",
-    description: "Set the hero profile email.",
-    options: [
-      {
-        name: "email",
-        type: 3,
-        description: "New email address.",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "bot-logs",
-    description: "Enable or disable bot log persistence.",
-    options: [
-      {
-        name: "state",
-        type: 3,
-        description: "Turn bot logs on or off.",
-        required: true,
-        choices: [
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "portfolio-logs",
-    description: "Set or create the portfolio log channel for bot errors and logs.",
-    options: [
-      {
-        name: "channelid",
-        type: 3,
-        description: "Existing text channel ID for portfolio logs.",
-        required: false,
-      },
-      {
-        name: "channelname",
-        type: 3,
-        description: "New channel name to create for portfolio logs.",
-        required: false,
-      },
-    ],
-  },
-  {
-    name: "display-viewer",
-    description: "Enable or disable visitor counter.",
-    options: [
-      {
-        name: "state",
-        type: 3,
-        description: "on or off",
-        required: true,
-        choices: [
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "display-total-viewers",
-    description: "Show total visitor counts and breakdown.",
-  },
-  {
-    name: "display-total-viewers-logs",
-    description: "Send new visitor logs to specified channel.",
-    options: [
-      { name: "channelid", type: 3, description: "Channel ID to send logs to", required: true },
-    ],
-  },
-  {
-    name: "show-visitors-list",
-    description: "Show paginated visitor list.",
-    options: [ { name: "page", type: 4, description: "Page number", required: false } ],
-  },
-  {
-    name: "visitor-stats",
-    description: "Show visitor analytics stats.",
-  },
-  {
-    name: "logs",
-    description: "Create or remove per-type log channels in this guild.",
-    options: [
-      {
-        name: "state",
-        type: 3,
-        description: "on or off",
-        required: true,
-        choices: [
-          { name: "on", value: "on" },
-          { name: "off", value: "off" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "purge",
-    description: "Delete a number of messages from this channel.",
-    options: [
-      { name: "count", type: 4, description: "Number of messages to delete (max 100)", required: true },
-    ],
-  },
-  {
-    name: "auto-role",
-    description: "Manage automatic role assignment for new members.",
-    options: [
-      { name: "action", type: 3, description: "add or remove", required: true, choices: [{ name: "add", value: "add" }, { name: "remove", value: "remove" }] },
-      { name: "roleid", type: 3, description: "Role ID to add/remove", required: true },
-    ],
-  },
-  {
-    name: "ping",
-    description: "Show recent pings and register pings related to site/bot.",
-  },
-  {
-    name: "pin",
-    description: "Pin a message by link.",
-    options: [ { name: "link", type: 3, description: "Message link to pin", required: true } ],
-  },
-];
 
 const client = new Client({
   intents: [
@@ -1251,11 +849,11 @@ client.on("presenceUpdate", async (_oldPresence, newPresence) => {
   try {
     const targets = await readBotStatusTargets();
     const targetIndex = targets.findIndex(t => t.userId === targetId);
-    
+
     if (targetIndex !== -1) {
       const target = targets[targetIndex];
       const currentStatus = newPresence.status;
-      
+
       const isOnlineNow = currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd";
       const wasOffline = target.lastStatus === "offline" || !target.lastStatus;
 
@@ -1406,10 +1004,10 @@ client.on("guildMemberAdd", async (member) => {
     const roles = auto[member.guild.id] || [];
     if (!roles.length) return;
     for (const r of roles) {
-      try { const role = await member.guild.roles.fetch(r).catch(() => null); if (role) await member.roles.add(role).catch(() => null); } catch {}
+      try { const role = await member.guild.roles.fetch(r).catch(() => null); if (role) await member.roles.add(role).catch(() => null); } catch { }
     }
     await postToLog(member.guild.id, "auto-role", `Assigned auto-roles to ${member.user.tag}: ${roles.join(",")}`);
-  } catch {}
+  } catch { }
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -1430,9 +1028,9 @@ client.on("interactionCreate", async (interaction) => {
       return { content: body, ephemeral };
     }
     const bodyObj = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
-    return { 
-      ...bodyObj, 
-      ephemeral: (bodyObj && typeof bodyObj.ephemeral === "boolean") ? bodyObj.ephemeral : ephemeral 
+    return {
+      ...bodyObj,
+      ephemeral: (bodyObj && typeof bodyObj.ephemeral === "boolean") ? bodyObj.ephemeral : ephemeral
     };
   };
 
@@ -1476,7 +1074,7 @@ client.on("interactionCreate", async (interaction) => {
         try {
           const sentMessage = await interaction.followUp({ ...payload, ephemeral: true } as Parameters<typeof interaction.followUp>[0]).catch(() => undefined);
           void scheduleDelete(sentMessage);
-        } catch {}
+        } catch { }
         return;
       }
       if (errObj?.code === 40060) {
@@ -1484,7 +1082,7 @@ client.on("interactionCreate", async (interaction) => {
         try {
           const sentMessage = await interaction.followUp({ ...payload, ephemeral: true } as any).catch(() => undefined);
           void scheduleDelete(sentMessage);
-        } catch {}
+        } catch { }
         return;
       }
       console.error("Failed to send interaction reply:", err);
@@ -1525,7 +1123,7 @@ client.on("interactionCreate", async (interaction) => {
         const target = interaction.options.getUser("target", true);
         const channelId = interaction.channelId;
         const guildId = interaction.guildId;
-        
+
         if (!channelId || !guildId) {
           await failReply("This command must be used in a server channel.");
           break;
@@ -1533,7 +1131,7 @@ client.on("interactionCreate", async (interaction) => {
 
         const targets = await readBotStatusTargets();
         const existingIndex = targets.findIndex(t => t.userId === target.id);
-        
+
         if (existingIndex !== -1) {
           targets[existingIndex].channelId = channelId;
           targets[existingIndex].guildId = guildId;
@@ -1555,14 +1153,14 @@ client.on("interactionCreate", async (interaction) => {
         const target = interaction.options.getUser("target", true);
         const targets = await readBotStatusTargets();
         const newTargets = targets.filter(t => t.userId !== target.id);
-        
+
         if (newTargets.length === targets.length) {
           await failReply(`<@${target.id}> is not currently being tracked.`);
           break;
         }
 
         await writeBotStatusTargets(newTargets);
-        
+
         const embed = new EmbedBuilder()
           .setTitle("✅ Success")
           .setDescription(`Stopped tracking <@${target.id}>.`)
@@ -1574,7 +1172,7 @@ client.on("interactionCreate", async (interaction) => {
       }
       case "reset-bot-status": {
         await writeBotStatusTargets([]);
-        
+
         const embed = new EmbedBuilder()
           .setTitle("✅ Success")
           .setDescription(`Reset all bot status trackers.`)
@@ -1908,7 +1506,7 @@ client.on("interactionCreate", async (interaction) => {
             if (ch) {
               try {
                 await (ch as TextChannel).send({ embeds: [new EmbedBuilder().setTitle("Bot Logs Disabled").setDescription("Logging has been turned off by an administrator.").setTimestamp(new Date()).setColor(0xff0000)] });
-              } catch {}
+              } catch { }
             }
           }
         }
@@ -1971,7 +1569,7 @@ client.on("interactionCreate", async (interaction) => {
         const analytics = await readAnalytics();
         const total = analytics.totalVisitors;
         const unique = analytics.visitors.length;
-        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount>1?1:0), 0);
+        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount > 1 ? 1 : 0), 0);
         const embed = new EmbedBuilder()
           .setTitle("👁 Total Visitors")
           .addFields(
@@ -1995,17 +1593,17 @@ client.on("interactionCreate", async (interaction) => {
         const page = interaction.options.getInteger("page") || 1;
         const analytics = await readAnalytics();
         const pageSize = 10;
-        const start = (page-1)*pageSize;
-        const slice = analytics.visitors.slice(start, start+pageSize);
-        const embeds = slice.map((v,i)=> new EmbedBuilder().setTitle(`#${start+i+1} ${v.visitorId.slice(0,8)}`).addFields(
-          { name: "Country", value: v.country||"-", inline:true },
-          { name: "City", value: v.city||"-", inline:true },
-          { name: "Device", value: v.deviceType||"-", inline:true },
-          { name: "Browser", value: v.browser||"-", inline:true },
-          { name: "OS", value: v.os||"-", inline:true },
-          { name: "Visits", value: String(v.visitCount||0), inline:true },
-          { name: "First Seen", value: v.firstVisit||"-", inline:true },
-          { name: "Last Seen", value: v.lastVisit||"-", inline:true }
+        const start = (page - 1) * pageSize;
+        const slice = analytics.visitors.slice(start, start + pageSize);
+        const embeds = slice.map((v, i) => new EmbedBuilder().setTitle(`#${start + i + 1} ${v.visitorId.slice(0, 8)}`).addFields(
+          { name: "Country", value: v.country || "-", inline: true },
+          { name: "City", value: v.city || "-", inline: true },
+          { name: "Device", value: v.deviceType || "-", inline: true },
+          { name: "Browser", value: v.browser || "-", inline: true },
+          { name: "OS", value: v.os || "-", inline: true },
+          { name: "Visits", value: String(v.visitCount || 0), inline: true },
+          { name: "First Seen", value: v.firstVisit || "-", inline: true },
+          { name: "Last Seen", value: v.lastVisit || "-", inline: true }
         ).setColor(0x5865f2));
         await successReply({ embeds });
         break;
@@ -2014,16 +1612,16 @@ client.on("interactionCreate", async (interaction) => {
         const analytics = await readAnalytics();
         const total = analytics.totalVisitors;
         const unique = analytics.visitors.length;
-        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount>1?1:0), 0);
-        const mobile = analytics.visitors.filter((v)=> (v.deviceType||"").toLowerCase().includes("mobile")).length;
+        const returning = analytics.visitors.reduce((acc, v) => acc + (v.visitCount > 1 ? 1 : 0), 0);
+        const mobile = analytics.visitors.filter((v) => (v.deviceType || "").toLowerCase().includes("mobile")).length;
         const desktop = analytics.visitors.length - mobile;
-        const topCountry = analytics.visitors.reduce((acc:Record<string,number>, v)=>{ if(v.country) acc[v.country]=(acc[v.country]||0)+1; return acc; },{} as Record<string,number>);
-        const topCountryName = Object.keys(topCountry).sort((a,b)=> (topCountry[b]||0)-(topCountry[a]||0))[0] || "-";
+        const topCountry = analytics.visitors.reduce((acc: Record<string, number>, v) => { if (v.country) acc[v.country] = (acc[v.country] || 0) + 1; return acc; }, {} as Record<string, number>);
+        const topCountryName = Object.keys(topCountry).sort((a, b) => (topCountry[b] || 0) - (topCountry[a] || 0))[0] || "-";
         // avg session and scroll
-        const avgSessionMs = Math.round((analytics.visitors.reduce((s,v)=> s + (v.avgSessionMs||0),0) || 0) / Math.max(1, analytics.visitors.length));
-        const avgScroll = Math.round((analytics.visitors.reduce((s,v)=> s + (v.avgScrollPct||0),0) || 0) / Math.max(1, analytics.visitors.length));
-        const resumeDownloads = analytics.visitors.reduce((s,v)=> s + (v.resumeDownloads||0),0);
-        const discordClicks = analytics.visitors.reduce((s,v)=> s + (v.discordClicks||0),0);
+        const avgSessionMs = Math.round((analytics.visitors.reduce((s, v) => s + (v.avgSessionMs || 0), 0) || 0) / Math.max(1, analytics.visitors.length));
+        const avgScroll = Math.round((analytics.visitors.reduce((s, v) => s + (v.avgScrollPct || 0), 0) || 0) / Math.max(1, analytics.visitors.length));
+        const resumeDownloads = analytics.visitors.reduce((s, v) => s + (v.resumeDownloads || 0), 0);
+        const discordClicks = analytics.visitors.reduce((s, v) => s + (v.discordClicks || 0), 0);
 
         const embed = new EmbedBuilder()
           .setTitle("Visitor Stats")
@@ -2031,10 +1629,10 @@ client.on("interactionCreate", async (interaction) => {
             { name: "👁️ Total Visitors", value: String(total || unique), inline: true },
             { name: "🆕 Unique Visitors", value: String(unique), inline: true },
             { name: "🔁 Returning Visitors", value: String(returning), inline: true },
-            { name: "📱 Mobile", value: `${Math.round((mobile/Math.max(1,analytics.visitors.length))*100)}%`, inline: true },
-            { name: "💻 Desktop", value: `${Math.round((desktop/Math.max(1,analytics.visitors.length))*100)}%`, inline: true },
+            { name: "📱 Mobile", value: `${Math.round((mobile / Math.max(1, analytics.visitors.length)) * 100)}%`, inline: true },
+            { name: "💻 Desktop", value: `${Math.round((desktop / Math.max(1, analytics.visitors.length)) * 100)}%`, inline: true },
             { name: "🌍 Top Country", value: topCountryName, inline: true },
-            { name: "🕒 Avg Session", value: `${Math.floor(avgSessionMs/60000)}m ${Math.round((avgSessionMs%60000)/1000)}s`, inline: true },
+            { name: "🕒 Avg Session", value: `${Math.floor(avgSessionMs / 60000)}m ${Math.round((avgSessionMs % 60000) / 1000)}s`, inline: true },
             { name: "📜 Avg Scroll", value: `${avgScroll}%`, inline: true },
             { name: "🖱️ Discord Button Clicks", value: String(discordClicks), inline: true },
             { name: "📄 Resume Downloads", value: String(resumeDownloads), inline: true }
@@ -2147,9 +1745,9 @@ const server = http.createServer(async (req, res) => {
       const mobile = analytics.visitors.filter((v) => (v.deviceType || "").toLowerCase().includes("mobile")).length;
       const desktop = analytics.visitors.length - mobile;
       const topCountry = analytics.visitors.reduce((acc: Record<string, number>, v) => { if (v.country) acc[v.country] = (acc[v.country] || 0) + 1; return acc; }, {} as Record<string, number>);
-      const topCountryName = Object.keys(topCountry).sort((a,b)=> (topCountry[b]||0)-(topCountry[a]||0))[0] || null;
+      const topCountryName = Object.keys(topCountry).sort((a, b) => (topCountry[b] || 0) - (topCountry[a] || 0))[0] || null;
       res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-      res.end(JSON.stringify({ totalVisitors: analytics.totalVisitors, visitors: analytics.visitors.length, mobilePct: analytics.visitors.length? Math.round((mobile/analytics.visitors.length)*100):0, desktopPct: analytics.visitors.length? Math.round((desktop/analytics.visitors.length)*100):0, topCountry: topCountryName }));
+      res.end(JSON.stringify({ totalVisitors: analytics.totalVisitors, visitors: analytics.visitors.length, mobilePct: analytics.visitors.length ? Math.round((mobile / analytics.visitors.length) * 100) : 0, desktopPct: analytics.visitors.length ? Math.round((desktop / analytics.visitors.length) * 100) : 0, topCountry: topCountryName }));
     } catch (err) {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "failed" }));
@@ -2165,8 +1763,8 @@ const server = http.createServer(async (req, res) => {
       const url = new URL(req.url, `http://${req.headers.host}`);
       const page = parseInt(url.searchParams.get("page") || "1");
       const pageSize = parseInt(url.searchParams.get("pageSize") || "20");
-      const start = (page-1)*pageSize;
-      const slice = analytics.visitors.slice(start, start+pageSize);
+      const start = (page - 1) * pageSize;
+      const slice = analytics.visitors.slice(start, start + pageSize);
       res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
       res.end(JSON.stringify({ total: analytics.visitors.length, page, pageSize, data: slice }));
     } catch (err) {
