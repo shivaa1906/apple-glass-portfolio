@@ -133,7 +133,11 @@ type BotStatusTarget = {
   channelId: string;
   guildId: string;
   lastStatus: string | null;
+  message?: string;
 };
+
+// In-memory recent notification map to avoid duplicate posts
+const recentNotifications: Record<string, { status: string; ts: number }> = {};
 
 const readBotStatusTargets = async (): Promise<BotStatusTarget[]> => {
   try {
@@ -852,27 +856,40 @@ client.on("presenceUpdate", async (_oldPresence, newPresence) => {
 
     if (targetIndex !== -1) {
       const target = targets[targetIndex];
-      const currentStatus = newPresence.status;
+        const currentStatus = newPresence.status;
+        const isOnlineNow = currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd";
+        const newLastStatus = isOnlineNow ? "online" : "offline";
 
-      const isOnlineNow = currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd";
-      const wasOffline = target.lastStatus === "offline" || !target.lastStatus;
+        // Only proceed if status actually changed
+        if (target.lastStatus !== newLastStatus) {
+          // Dedupe: avoid sending duplicate notifications in short bursts
+          const lastNotified = recentNotifications[targetId];
+          const nowTs = Date.now();
+          if (lastNotified && lastNotified.status === newLastStatus && nowTs - lastNotified.ts < 10_000) {
+            // skip duplicate within 10s
+            targets[targetIndex].lastStatus = newLastStatus;
+            await writeBotStatusTargets(targets);
+          } else {
+            const channel = await client.channels.fetch(target.channelId).catch(() => null);
+            if (channel && channel.isTextBased()) {
+              const statusText = newLastStatus === "online" ? "ONLINE" : "OFFLINE";
+              const embed = new EmbedBuilder()
+                .setTitle("✅ Success")
+                .setDescription(`**<@${targetId}>** is now **${statusText}**`)
+                .setColor(newLastStatus === "online" ? 0x57F287 : 0xED4245);
 
-      if (isOnlineNow && wasOffline) {
-        const channel = await client.channels.fetch(target.channelId).catch(() => null);
-        if (channel && channel.isTextBased()) {
-          const embed = new EmbedBuilder()
-            .setTitle("✅ Success")
-            .setDescription(`**<@${targetId}>** is now **ONLINE**`)
-            .setColor(0x57F287);
-          await (channel as import("discord.js").TextChannel).send({ embeds: [embed] }).catch(() => null);
+              if (target.message) {
+                embed.addFields({ name: "Note", value: target.message, inline: false });
+              }
+
+              await (channel as import("discord.js").TextChannel).send({ embeds: [embed] }).catch(() => null);
+              recentNotifications[targetId] = { status: newLastStatus, ts: nowTs };
+            }
+
+            targets[targetIndex].lastStatus = newLastStatus;
+            await writeBotStatusTargets(targets);
+          }
         }
-      }
-
-      const newLastStatus = isOnlineNow ? "online" : "offline";
-      if (target.lastStatus !== newLastStatus) {
-        targets[targetIndex].lastStatus = newLastStatus;
-        await writeBotStatusTargets(targets);
-      }
     }
   } catch (error) {
     console.error("Error processing bot status tracking:", error);
@@ -1119,8 +1136,10 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     switch (command) {
-      case "bot-status": {
+      case "bot-status":
+      case "status": {
         const target = interaction.options.getUser("target", true);
+        const message = interaction.options.getString("message", false) || undefined;
         const channelId = interaction.channelId;
         const guildId = interaction.guildId;
 
@@ -1135,21 +1154,23 @@ client.on("interactionCreate", async (interaction) => {
         if (existingIndex !== -1) {
           targets[existingIndex].channelId = channelId;
           targets[existingIndex].guildId = guildId;
+          if (message) targets[existingIndex].message = message;
         } else {
-          targets.push({ userId: target.id, channelId, guildId, lastStatus: "offline" });
+          targets.push({ userId: target.id, channelId, guildId, lastStatus: null, message });
         }
         await writeBotStatusTargets(targets);
 
         const embed = new EmbedBuilder()
           .setTitle("✅ Success")
-          .setDescription(`Tracking <@${target.id}>. Will notify when they come online.`)
+          .setDescription(`Tracking <@${target.id}>. Will notify when they change online/offline status.`)
           .setColor(0x57F287);
 
         await successReply({ embeds: [embed] });
         await logCommand(command, user, `Started tracking status for ${target.tag}`);
         break;
       }
-      case "bot-status-remove": {
+      case "bot-status-remove":
+      case "remove": {
         const target = interaction.options.getUser("target", true);
         const targets = await readBotStatusTargets();
         const newTargets = targets.filter(t => t.userId !== target.id);

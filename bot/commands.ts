@@ -14,8 +14,38 @@ export const commands: RESTPostAPIApplicationCommandsJSONBody[] = [
         ],
     },
     {
+        name: "status",
+        description: "Track a user coming online or going offline (alias of bot-status).",
+        options: [
+            {
+                name: "target",
+                type: 6,
+                description: "The bot or user to track",
+                required: true,
+            },
+            {
+                name: "message",
+                type: 3,
+                description: "Optional message to include when notifying",
+                required: false,
+            },
+        ],
+    },
+    {
         name: "bot-status-remove",
         description: "Stop tracking a bot or user.",
+        options: [
+            {
+                name: "target",
+                type: 6,
+                description: "The bot or user to stop tracking",
+                required: true,
+            },
+        ],
+    },
+    {
+        name: "remove",
+        description: "Stop tracking a bot or user (alias of bot-status-remove).",
         options: [
             {
                 name: "target",
